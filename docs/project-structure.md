@@ -84,4 +84,4 @@ Redmine 类功能（项目、工作项、Wiki 等）可按 **后端模块** 在 
 
 ---
 
-**关联文档**：[API 契约](./api-contract.md) · [鉴权与路由](./auth-and-router.md)
+**关联文档**：[前端开发计划](./frontend-development-plan.md) · [API 契约](./api-contract.md) · [鉴权与路由](./auth-and-router.md)

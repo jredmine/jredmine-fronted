@@ -20,4 +20,5 @@ pnpm preview
 
 ## 文档
 
-设计与对接约定见 [`docs/`](./docs/)（技术栈、API 契约、鉴权与路由、目录结构、部署等）。
+- **开发计划（优先级 / 里程碑 / 验收）**：[`docs/frontend-development-plan.md`](./docs/frontend-development-plan.md)
+- 其余设计与对接约定见 [`docs/`](./docs/)（技术栈、API 契约、鉴权与路由、目录结构、部署等）。

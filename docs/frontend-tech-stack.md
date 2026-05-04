@@ -65,6 +65,7 @@
 
 | 文档 | 说明 |
 |------|------|
+| [frontend-development-plan.md](./frontend-development-plan.md) | **按 P0–P3 与里程碑 M1–M5 可执行开发计划**（与后端 Controller 映射、验收清单） |
 | [api-contract.md](./api-contract.md) | 统一响应 `ApiResponse`、分页 `PageResponse`、`ResultCode`、OpenAPI 与可选类型生成 |
 | [auth-and-router.md](./auth-and-router.md) | JWT、Pinia 会话、axios 拦截、Router `meta` 与守卫、刷新/登出策略 |
 | [project-structure.md](./project-structure.md) | `src` 目录布局、命名与分层职责 |

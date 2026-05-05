@@ -42,6 +42,8 @@
 - 在 **401** 且存在可刷新凭据时，可 **串行** 尝试刷新一次，成功后重试原请求，失败则登出并跳转登录页，避免无限循环。
 - 若后端未来区分 access / refresh 双令牌，在前端 store 中拆开字段并更新本文档与类型定义。
 
+**当前实现**（`src/services/http.ts`）：对受保护请求返回 **401** 时，以单例 `refreshPromise` 避免并发多次调用 `POST /api/auth/refresh`；刷新成功则 `applyLoginPayload` 并**重试原请求**；若请求为 `/api/auth/refresh` 或刷新仍失败，则 `clearSession` 并跳转登录。登录、注册、密码相关路径不触发刷新重试。
+
 ## 5. Vue Router 路由元信息与守卫
 
 ### 5.1 `meta` 约定

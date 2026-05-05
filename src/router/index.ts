@@ -28,6 +28,18 @@ const routes = [
       },
     ],
   },
+  {
+    path: '/register',
+    component: EmptyLayout,
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: '',
+        name: 'Register',
+        component: () => import('@/views/auth/RegisterView.vue'),
+      },
+    ],
+  },
 ]
 
 export const router = createRouter({
@@ -44,7 +56,7 @@ router.beforeEach((to) => {
   if (needsAuth(to) && !auth.isAuthenticated) {
     return { name: 'Login', query: { redirect: to.fullPath } }
   }
-  if (to.name === 'Login' && auth.isAuthenticated) {
+  if ((to.name === 'Login' || to.name === 'Register') && auth.isAuthenticated) {
     return { name: 'Home' }
   }
   return true

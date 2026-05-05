@@ -1,16 +1,47 @@
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router'
+import { ref, reactive } from 'vue'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import { loginApi } from '@/services/auth'
+import { parseBackendErrorMessage } from '@/utils/http-error'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-/** 骨架阶段占位：无后端时用于验证路由守卫与布局，接入 /api/auth/login 后删除 */
-function enterDevShell() {
-  auth.setToken('__jredmine_dev_placeholder__')
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-  void router.replace(redirect || '/')
+const formRef = ref<FormInstance>()
+const loading = ref(false)
+
+const form = reactive({
+  login: '',
+  password: '',
+})
+
+const rules: FormRules = {
+  login: [{ required: true, message: '请输入登录名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+}
+
+async function onSubmit() {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  loading.value = true
+  try {
+    const data = await loginApi(form.login, form.password)
+    auth.applyLoginPayload(data)
+    ElMessage.success('登录成功')
+    const redirect = route.query.redirect
+    const target: RouteLocationRaw =
+      typeof redirect === 'string' && redirect ? redirect : { name: 'Home' }
+    void router.replace(target)
+  } catch (e) {
+    ElMessage.error(parseBackendErrorMessage(e, '登录失败，请重试'))
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -19,16 +50,25 @@ function enterDevShell() {
     <template #header>
       <span>登录</span>
     </template>
-    <el-alert
-      title="后续对接 JRedmine 登录接口"
-      type="info"
-      description="提交至 POST /api/auth/login，解析 ApiResponse 中的 token 并写入 auth store。下方按钮仅用于本地验证路由与布局。"
-      show-icon
-      :closable="false"
-    />
-    <div class="login-card__actions">
-      <el-button type="primary" @click="enterDevShell">进入系统（骨架占位）</el-button>
-    </div>
+    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="onSubmit">
+      <el-form-item label="登录名" prop="login">
+        <el-input v-model="form.login" autocomplete="username" clearable />
+      </el-form-item>
+      <el-form-item label="密码" prop="password">
+        <el-input
+          v-model="form.password"
+          type="password"
+          show-password
+          autocomplete="current-password"
+        />
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" :loading="loading" native-type="submit" class="login-card__submit">
+          登录
+        </el-button>
+        <router-link :to="{ name: 'Register' }" class="login-card__link">注册账号</router-link>
+      </el-form-item>
+    </el-form>
   </el-card>
 </template>
 
@@ -37,9 +77,20 @@ function enterDevShell() {
   width: min(420px, 100%);
 }
 
-.login-card__actions {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
+.login-card__submit {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.login-card__link {
+  display: block;
+  text-align: center;
+  font-size: 14px;
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.login-card__link:hover {
+  text-decoration: underline;
 }
 </style>

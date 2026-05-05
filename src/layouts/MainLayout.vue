@@ -15,7 +15,10 @@ function logout() {
   <el-container class="main-layout">
     <el-header class="main-layout__header">
       <span class="main-layout__title">JRedmine</span>
-      <el-button v-if="auth.isAuthenticated" link type="primary" @click="logout">退出</el-button>
+      <div v-if="auth.isAuthenticated" class="main-layout__user">
+        <span class="main-layout__name">{{ auth.displayName }}</span>
+        <el-button link type="primary" @click="logout">退出</el-button>
+      </div>
     </el-header>
     <el-main class="main-layout__main">
       <router-view />
@@ -37,6 +40,17 @@ function logout() {
 
 .main-layout__title {
   font-weight: 600;
+}
+
+.main-layout__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.main-layout__name {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
 }
 
 .main-layout__main {

@@ -9,8 +9,11 @@ const auth = useAuthStore()
     <template #header>
       <span>首页</span>
     </template>
-    <p>JRedmine 前端骨架已就绪。</p>
-    <p v-if="auth.accessToken" class="muted">当前已携带访问令牌（长度 {{ auth.accessToken.length }}）。对接后端后请改为真实登录流程。</p>
+    <p>欢迎使用 JRedmine。</p>
+    <p v-if="auth.user" class="muted">
+      当前用户：<strong>{{ auth.user.login }}</strong>
+      <template v-if="auth.user.email">（{{ auth.user.email }}）</template>
+    </p>
   </el-card>
 </template>
 

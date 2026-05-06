@@ -3,10 +3,12 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import { useProjectContextStore } from '@/stores/project-context'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const projectContext = useProjectContextStore()
 
 const menuItems = [
   { key: 'home', name: 'Home', title: '首页' },
@@ -14,14 +16,26 @@ const menuItems = [
 ]
 
 const activeMenu = computed(() => String(route.meta.menuKey || 'home'))
-const breadcrumbs = computed(() =>
-  route.matched
+const breadcrumbs = computed(() => {
+  const items = route.matched
     .map((item: { path: string; meta: { title?: unknown } }) => ({
       path: item.path,
       title: item.meta.title ? String(item.meta.title) : '',
     }))
-    .filter((item: { title: string }) => Boolean(item.title)),
-)
+    .filter((item: { title: string }) => Boolean(item.title))
+
+  if (route.name === 'ProjectOverview' && projectContext.currentProject) {
+    const next = [...items]
+    if (next.length > 0) {
+      next[next.length - 1] = {
+        path: route.path,
+        title: projectContext.currentProject.name,
+      }
+    }
+    return next
+  }
+  return items
+})
 
 function gotoByName(name: string) {
   if (route.name !== name) {

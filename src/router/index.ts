@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import { useProjectContextStore } from '@/stores/project-context'
 import { authRoutes } from './routes/auth'
 import { mainRoutes } from './routes/main'
 
@@ -31,4 +32,10 @@ router.beforeEach((to) => {
   document.title = pageTitle
 
   return true
+})
+
+router.afterEach((to) => {
+  if (to.name !== 'ProjectOverview') {
+    useProjectContextStore().clear()
+  }
 })

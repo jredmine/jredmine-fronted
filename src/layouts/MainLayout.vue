@@ -1,9 +1,38 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
+
+const menuItems = [
+  { key: 'home', name: 'Home', title: '首页' },
+  { key: 'projects', name: 'ProjectList', title: '项目列表' },
+]
+
+const activeMenu = computed(() => String(route.meta.menuKey || 'home'))
+const breadcrumbs = computed(() =>
+  route.matched
+    .map((item: { path: string; meta: { title?: unknown } }) => ({
+      path: item.path,
+      title: item.meta.title ? String(item.meta.title) : '',
+    }))
+    .filter((item: { title: string }) => Boolean(item.title)),
+)
+
+function gotoByName(name: string) {
+  if (route.name !== name) {
+    void router.push({ name })
+  }
+}
+
+function onMenuSelect(key: string) {
+  const target = menuItems.find((item) => item.key === key)
+  if (target) gotoByName(target.name)
+}
 
 function logout() {
   auth.clearSession()
@@ -20,9 +49,25 @@ function logout() {
         <el-button link type="primary" @click="logout">退出</el-button>
       </div>
     </el-header>
-    <el-main class="main-layout__main">
-      <router-view />
-    </el-main>
+
+    <el-container>
+      <el-aside class="main-layout__aside" width="220px">
+        <el-menu :default-active="activeMenu" @select="onMenuSelect">
+          <el-menu-item v-for="item in menuItems" :key="item.key" :index="item.key">
+            {{ item.title }}
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <el-main class="main-layout__main">
+        <el-breadcrumb class="main-layout__breadcrumb" separator="/">
+          <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
+            {{ item.title }}
+          </el-breadcrumb-item>
+        </el-breadcrumb>
+        <router-view />
+      </el-main>
+    </el-container>
   </el-container>
 </template>
 
@@ -53,9 +98,16 @@ function logout() {
   color: var(--el-text-color-regular);
 }
 
+.main-layout__aside {
+  border-right: 1px solid var(--el-border-color-light);
+  background: var(--el-fill-color-blank);
+}
+
 .main-layout__main {
-  max-width: 1200px;
-  margin: 0 auto;
   width: 100%;
+}
+
+.main-layout__breadcrumb {
+  margin-bottom: 16px;
 }
 </style>

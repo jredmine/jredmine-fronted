@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import 'vue-router'
 
 interface ImportMetaEnv {
   /** 留空时使用当前站点源 + Vite 代理 */
@@ -9,3 +10,13 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+    title?: string
+    menuKey?: string
+  }
+}
+
+export {}

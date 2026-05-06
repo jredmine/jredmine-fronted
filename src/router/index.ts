@@ -1,46 +1,10 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import MainLayout from '@/layouts/MainLayout.vue'
-import EmptyLayout from '@/layouts/EmptyLayout.vue'
 
-const routes = [
-  {
-    path: '/',
-    component: MainLayout,
-    meta: { requiresAuth: true },
-    children: [
-      {
-        path: '',
-        name: 'Home',
-        component: () => import('@/views/home/HomeView.vue'),
-      },
-    ],
-  },
-  {
-    path: '/login',
-    component: EmptyLayout,
-    meta: { requiresAuth: false },
-    children: [
-      {
-        path: '',
-        name: 'Login',
-        component: () => import('@/views/auth/LoginView.vue'),
-      },
-    ],
-  },
-  {
-    path: '/register',
-    component: EmptyLayout,
-    meta: { requiresAuth: false },
-    children: [
-      {
-        path: '',
-        name: 'Register',
-        component: () => import('@/views/auth/RegisterView.vue'),
-      },
-    ],
-  },
-]
+import { useAuthStore } from '@/stores/auth'
+import { authRoutes } from './routes/auth'
+import { mainRoutes } from './routes/main'
+
+const routes = [...mainRoutes, ...authRoutes]
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -53,11 +17,18 @@ function needsAuth(to: RouteLocationNormalized) {
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
+
   if (needsAuth(to) && !auth.isAuthenticated) {
     return { name: 'Login', query: { redirect: to.fullPath } }
   }
+
   if ((to.name === 'Login' || to.name === 'Register') && auth.isAuthenticated) {
     return { name: 'Home' }
   }
+
+  const appTitle = import.meta.env.VITE_APP_TITLE || 'JRedmine'
+  const pageTitle = to.meta.title ? `${String(to.meta.title)} - ${appTitle}` : appTitle
+  document.title = pageTitle
+
   return true
 })

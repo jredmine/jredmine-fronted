@@ -35,7 +35,6 @@ router.beforeEach((to) => {
 })
 
 router.afterEach((to) => {
-  if (to.name !== 'ProjectOverview') {
-    useProjectContextStore().clear()
-  }
+  const hasProjectId = to.params.projectId != null && String(to.params.projectId).length > 0
+  if (!hasProjectId) useProjectContextStore().clear()
 })

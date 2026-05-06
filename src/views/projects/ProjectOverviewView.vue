@@ -130,6 +130,17 @@ function onFormSuccess() {
           <p class="hint">模块与跟踪器等字段将在后续与后端详情 DTO 对齐后展示与编辑。</p>
         </template>
       </el-tab-pane>
+      <el-tab-pane label="任务" name="issues">
+        <el-empty description="进入任务列表以查看与创建任务">
+          <el-button
+            type="primary"
+            :disabled="projectId == null"
+            @click="router.push({ name: 'IssueList', params: { projectId: String(projectId) } })"
+          >
+            打开任务列表
+          </el-button>
+        </el-empty>
+      </el-tab-pane>
       <el-tab-pane label="成员" name="members">
         <el-table v-loading="membersLoading" :data="members" stripe style="width: 100%">
           <el-table-column prop="login" label="登录名" width="140" />

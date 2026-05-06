@@ -25,6 +25,18 @@ export const mainRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/projects/ProjectOverviewView.vue'),
         meta: { title: '项目', menuKey: 'projects' },
       },
+      {
+        path: 'projects/:projectId/issues',
+        name: 'IssueList',
+        component: () => import('@/views/issues/IssueListView.vue'),
+        meta: { title: '任务', menuKey: 'projects' },
+      },
+      {
+        path: 'projects/:projectId/issues/:issueId',
+        name: 'IssueDetail',
+        component: () => import('@/views/issues/IssueDetailView.vue'),
+        meta: { title: '任务详情', menuKey: 'projects' },
+      },
     ],
   },
 ]

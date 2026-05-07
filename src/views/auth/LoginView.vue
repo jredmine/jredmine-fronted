@@ -66,7 +66,12 @@ async function onSubmit() {
         <el-button type="primary" :loading="loading" native-type="submit" class="login-card__submit">
           登录
         </el-button>
-        <router-link :to="{ name: 'Register' }" class="login-card__link">注册账号</router-link>
+        <div class="login-card__links">
+          <router-link :to="{ name: 'PasswordResetRequest' }" class="login-card__link">
+            忘记密码
+          </router-link>
+          <router-link :to="{ name: 'Register' }" class="login-card__link">注册账号</router-link>
+        </div>
       </el-form-item>
     </el-form>
   </el-card>
@@ -80,6 +85,13 @@ async function onSubmit() {
 .login-card__submit {
   width: 100%;
   margin-bottom: 12px;
+}
+
+.login-card__links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .login-card__link {

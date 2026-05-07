@@ -16,6 +16,32 @@ export const authRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/password/reset',
+    component: EmptyLayout,
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: '',
+        name: 'PasswordResetRequest',
+        component: () => import('@/views/auth/PasswordResetRequestView.vue'),
+        meta: { title: '找回密码' },
+      },
+    ],
+  },
+  {
+    path: '/password/reset/confirm',
+    component: EmptyLayout,
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: '',
+        name: 'PasswordResetConfirm',
+        component: () => import('@/views/auth/PasswordResetConfirmView.vue'),
+        meta: { title: '重置密码' },
+      },
+    ],
+  },
+  {
     path: '/register',
     component: EmptyLayout,
     meta: { requiresAuth: false },

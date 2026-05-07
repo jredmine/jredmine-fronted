@@ -39,3 +39,28 @@ export interface UserRegisterRequest {
   email: string
   hideEmailFlag?: boolean
 }
+
+/**
+ * 与后端 PasswordChangeRequestDTO 对齐
+ */
+export interface PasswordChangeRequest {
+  oldPassword: string
+  newPassword: string
+  confirmNewPassword: string
+}
+
+/**
+ * 与后端 PasswordResetConfirmRequestDTO 对齐
+ */
+export interface PasswordResetConfirmRequest {
+  token: string
+  newPassword: string
+  confirmPassword: string
+}
+
+/**
+ * 与后端 PasswordResetRequestDTO 对齐
+ */
+export interface PasswordResetRequest {
+  email: string
+}

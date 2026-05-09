@@ -8,18 +8,13 @@ import type {
   UserRegisterResponse,
 } from '@/types/user'
 import { http } from '@/services/http'
+import { unwrapApiOk } from '@/utils/api-unwrap'
 
 function ensureSuccess<T>(body: ApiResponse<T>, fallback: string): T {
   if (!body.success || body.data === undefined || body.data === null) {
     throw new Error(body.message || fallback)
   }
   return body.data
-}
-
-function ensureOk(body: ApiResponse<unknown>, fallback: string): void {
-  if (!body.success) {
-    throw new Error(body.message || fallback)
-  }
 }
 
 export async function loginApi(login: string, password: string): Promise<UserLoginResponse> {
@@ -49,15 +44,15 @@ export async function refreshTokenApi(token: string): Promise<UserLoginResponse>
 
 export async function changePasswordApi(payload: PasswordChangeRequest): Promise<void> {
   const { data } = await http.post<ApiResponse<unknown>>('/api/auth/change-password', payload)
-  ensureOk(data, '密码变更失败')
+  unwrapApiOk(data, '密码变更失败')
 }
 
 export async function confirmPasswordResetApi(payload: PasswordResetConfirmRequest): Promise<void> {
   const { data } = await http.post<ApiResponse<unknown>>('/api/auth/password/reset/confirm', payload)
-  ensureOk(data, '密码重置失败')
+  unwrapApiOk(data, '密码重置失败')
 }
 
 export async function requestPasswordResetApi(payload: PasswordResetRequest): Promise<void> {
   const { data } = await http.post<ApiResponse<unknown>>('/api/auth/password/reset', payload)
-  ensureOk(data, '请求密码重置失败')
+  unwrapApiOk(data, '请求密码重置失败')
 }

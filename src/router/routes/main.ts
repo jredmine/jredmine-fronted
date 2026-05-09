@@ -37,6 +37,24 @@ export const mainRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/issues/IssueDetailView.vue'),
         meta: { title: '任务详情', menuKey: 'projects' },
       },
+      {
+        path: 'admin/users',
+        name: 'AdminUsers',
+        component: () => import('@/views/admin/UserAdminView.vue'),
+        meta: { title: '用户管理', menuKey: 'admin-users' },
+      },
+      {
+        path: 'admin/roles',
+        name: 'AdminRoles',
+        component: () => import('@/views/admin/RoleAdminView.vue'),
+        meta: { title: '角色管理', menuKey: 'admin-roles' },
+      },
+      {
+        path: 'admin/permissions',
+        name: 'AdminPermissions',
+        component: () => import('@/views/admin/PermissionAdminView.vue'),
+        meta: { title: '权限列表', menuKey: 'admin-permissions' },
+      },
     ],
   },
 ]

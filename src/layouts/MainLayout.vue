@@ -6,6 +6,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectContextStore } from '@/stores/project-context'
 import { changePasswordApi } from '@/services/auth'
+import { fetchCurrentUserPreference, updateCurrentUserPreference } from '@/services/users'
 import { parseBackendErrorMessage } from '@/utils/http-error'
 
 const router = useRouter()
@@ -16,6 +17,9 @@ const projectContext = useProjectContextStore()
 const menuItems = [
   { key: 'home', name: 'Home', title: '首页' },
   { key: 'projects', name: 'ProjectList', title: '项目列表' },
+  { key: 'admin-users', name: 'AdminUsers', title: '用户管理' },
+  { key: 'admin-roles', name: 'AdminRoles', title: '角色管理' },
+  { key: 'admin-permissions', name: 'AdminPermissions', title: '权限列表' },
 ]
 
 const activeMenu = computed(() => String(route.meta.menuKey || 'home'))
@@ -118,6 +122,55 @@ async function submitChangePassword() {
     changePwdLoading.value = false
   }
 }
+
+const myPrefDialogVisible = ref(false)
+const myPrefFormRef = ref<FormInstance>()
+const myPrefLoading = ref(false)
+const myPrefForm = reactive({
+  hideMail: false,
+  timeZone: 'Asia/Shanghai',
+  others: '',
+})
+
+const myPrefRules: FormRules = {
+  timeZone: [{ required: true, message: '请输入时区', trigger: 'blur' }],
+}
+
+async function openMyPreference() {
+  myPrefDialogVisible.value = true
+  myPrefLoading.value = true
+  try {
+    const pref = await fetchCurrentUserPreference()
+    myPrefForm.hideMail = Boolean(pref.hideMail)
+    myPrefForm.timeZone = pref.timeZone ?? 'Asia/Shanghai'
+    myPrefForm.others = pref.others ?? ''
+  } catch (e) {
+    ElMessage.error(parseBackendErrorMessage(e, '加载偏好设置失败'))
+  } finally {
+    myPrefLoading.value = false
+  }
+}
+
+async function submitMyPreference() {
+  if (!myPrefFormRef.value) return
+  const valid = await myPrefFormRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  myPrefLoading.value = true
+  try {
+    await updateCurrentUserPreference({
+      hideMail: myPrefForm.hideMail,
+      timeZone: myPrefForm.timeZone,
+      others: myPrefForm.others || undefined,
+    })
+    ElMessage.success('偏好设置已更新')
+    myPrefDialogVisible.value = false
+  } catch (e) {
+    ElMessage.error(parseBackendErrorMessage(e, '更新偏好设置失败'))
+  } finally {
+    myPrefLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -126,6 +179,7 @@ async function submitChangePassword() {
       <span class="main-layout__title">JRedmine</span>
       <div v-if="auth.isAuthenticated" class="main-layout__user">
         <span class="main-layout__name">{{ auth.displayName }}</span>
+        <el-button link type="primary" @click="openMyPreference">我的偏好</el-button>
         <el-button link type="primary" @click="openChangePassword">修改密码</el-button>
         <el-button link type="primary" @click="logout">退出</el-button>
       </div>
@@ -177,6 +231,25 @@ async function submitChangePassword() {
       <template #footer>
         <el-button @click="changePwdDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="changePwdLoading" @click="submitChangePassword">确认</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="myPrefDialogVisible" title="我的偏好" width="520px" append-to-body :close-on-click-modal="false">
+      <el-form ref="myPrefFormRef" :model="myPrefForm" :rules="myPrefRules" label-position="top" v-loading="myPrefLoading">
+        <el-form-item label="隐藏邮箱">
+          <el-switch v-model="myPrefForm.hideMail" />
+        </el-form-item>
+        <el-form-item label="时区" prop="timeZone">
+          <el-input v-model="myPrefForm.timeZone" placeholder="如：Asia/Shanghai" />
+        </el-form-item>
+        <el-form-item label="其他设置（JSON）">
+          <el-input v-model="myPrefForm.others" type="textarea" :rows="4" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="myPrefDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="myPrefLoading" @click="submitMyPreference">保存</el-button>
       </template>
     </el-dialog>
   </el-container>

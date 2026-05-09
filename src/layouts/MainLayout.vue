@@ -132,6 +132,13 @@ const myPrefForm = reactive({
   others: '',
 })
 
+const timeZoneOptions = [
+  { value: 'Asia/Shanghai', label: 'Asia/Shanghai' },
+  { value: 'Asia/Hong_Kong', label: 'Asia/Hong_Kong' },
+  { value: 'Asia/Tokyo', label: 'Asia/Tokyo' },
+  { value: 'UTC', label: 'UTC' },
+]
+
 const myPrefRules: FormRules = {
   timeZone: [{ required: true, message: '请输入时区', trigger: 'blur' }],
 }
@@ -240,7 +247,9 @@ async function submitMyPreference() {
           <el-switch v-model="myPrefForm.hideMail" />
         </el-form-item>
         <el-form-item label="时区" prop="timeZone">
-          <el-input v-model="myPrefForm.timeZone" placeholder="如：Asia/Shanghai" />
+          <el-select v-model="myPrefForm.timeZone" filterable allow-create default-first-option style="width: 100%">
+            <el-option v-for="tz in timeZoneOptions" :key="tz.value" :label="tz.label" :value="tz.value" />
+          </el-select>
         </el-form-item>
         <el-form-item label="其他设置（JSON）">
           <el-input v-model="myPrefForm.others" type="textarea" :rows="4" placeholder="可选" />

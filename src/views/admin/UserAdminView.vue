@@ -34,6 +34,24 @@ const statusOptions = [
   { value: 3, label: '待激活' },
 ]
 
+const languageOptions = [
+  { value: 'zh-CN', label: '简体中文（zh-CN）' },
+  { value: 'en-US', label: 'English（en-US）' },
+]
+
+const mailNotificationOptions = [
+  { value: 'all', label: '全部通知（all）' },
+  { value: 'none', label: '不通知（none）' },
+  { value: 'only_my_events', label: '仅我的事件（only_my_events）' },
+]
+
+const timeZoneOptions = [
+  { value: 'Asia/Shanghai', label: 'Asia/Shanghai' },
+  { value: 'Asia/Hong_Kong', label: 'Asia/Hong_Kong' },
+  { value: 'Asia/Tokyo', label: 'Asia/Tokyo' },
+  { value: 'UTC', label: 'UTC' },
+]
+
 function statusLabel(v: number | null | undefined) {
   const found = statusOptions.find((s) => s.value === v)
   return found ? found.label : String(v ?? '')
@@ -370,10 +388,20 @@ onMounted(() => {
             </el-select>
           </el-form-item>
           <el-form-item label="语言">
-            <el-input v-model="userForm.language" placeholder="如：zh-CN" />
+            <el-select v-model="userForm.language" filterable allow-create default-first-option style="width: 100%">
+              <el-option v-for="l in languageOptions" :key="l.value" :label="l.label" :value="l.value" />
+            </el-select>
           </el-form-item>
           <el-form-item label="邮件通知">
-            <el-input v-model="userForm.mailNotification" placeholder="如：all" />
+            <el-select
+              v-model="userForm.mailNotification"
+              filterable
+              allow-create
+              default-first-option
+              style="width: 100%"
+            >
+              <el-option v-for="m in mailNotificationOptions" :key="m.value" :label="m.label" :value="m.value" />
+            </el-select>
           </el-form-item>
         </div>
       </el-form>
@@ -396,7 +424,9 @@ onMounted(() => {
           <el-switch v-model="prefForm.hideMail" />
         </el-form-item>
         <el-form-item label="时区" prop="timeZone">
-          <el-input v-model="prefForm.timeZone" placeholder="如：Asia/Shanghai" />
+          <el-select v-model="prefForm.timeZone" filterable allow-create default-first-option style="width: 100%">
+            <el-option v-for="tz in timeZoneOptions" :key="tz.value" :label="tz.label" :value="tz.value" />
+          </el-select>
         </el-form-item>
         <el-form-item label="其他设置（JSON）">
           <el-input v-model="prefForm.others" type="textarea" :rows="4" placeholder="可选" />

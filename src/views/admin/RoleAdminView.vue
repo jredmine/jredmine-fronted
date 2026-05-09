@@ -63,6 +63,15 @@ const permGroups = computed(() => {
     }))
 })
 
+const validPermKeySet = computed(() => new Set(allPerms.value.map((p) => p.key)))
+
+function sanitizePermissions(input: string[]) {
+  const valid = validPermKeySet.value
+  const next = input.filter((k) => typeof k === 'string' && valid.has(k))
+  const removed = input.filter((k) => !next.includes(k))
+  return { next, removedCount: input.length - next.length, removed }
+}
+
 async function loadPermissionsOnce() {
   if (allPerms.value.length > 0 || permLoading.value) return
   permLoading.value = true
@@ -165,6 +174,15 @@ async function openEdit(row: RoleListItem) {
     roleForm.timeEntriesVisibility = detail.timeEntriesVisibility ?? 'all'
     roleForm.allRolesManaged = Boolean(detail.allRolesManaged)
     roleForm.settings = detail.settings ?? ''
+
+    // 过滤历史/无效权限（例如 '---\\n--'、':add_project'）
+    if (allPerms.value.length > 0 && roleForm.permissions.length > 0) {
+      const { next, removedCount } = sanitizePermissions(roleForm.permissions)
+      if (removedCount > 0) {
+        roleForm.permissions = next
+        ElMessage.warning(`已自动移除 ${removedCount} 个无效权限`)
+      }
+    }
   } catch (e) {
     ElMessage.error(parseBackendErrorMessage(e, '加载角色详情失败'))
   } finally {
@@ -174,6 +192,16 @@ async function openEdit(row: RoleListItem) {
 
 async function submitRole() {
   if (!roleFormRef.value) return
+  await loadPermissionsOnce()
+
+  if (allPerms.value.length > 0 && roleForm.permissions.length > 0) {
+    const { next, removedCount } = sanitizePermissions(roleForm.permissions)
+    if (removedCount > 0) {
+      roleForm.permissions = next
+      ElMessage.warning(`已自动移除 ${removedCount} 个无效权限`)
+    }
+  }
+
   const valid = await roleFormRef.value.validate().catch(() => false)
   if (!valid) return
 
@@ -453,7 +481,6 @@ onMounted(() => {
                       v-for="p in g.items"
                       :key="p.key"
                       :label="p.key"
-                      :value="p.key"
                     >
                       {{ p.name }}（{{ p.key }}）
                     </el-checkbox>

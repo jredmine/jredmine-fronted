@@ -102,9 +102,6 @@ onMounted(() => {
       <div class="list-header">
         <span>任务</span>
         <div class="list-header__actions">
-          <el-button @click="router.push({ name: 'ProjectOverview', params: { projectId: String(projectId) } })">
-            返回项目
-          </el-button>
           <el-button type="primary" :disabled="projectId == null" @click="openCreate">新建任务</el-button>
         </div>
       </div>

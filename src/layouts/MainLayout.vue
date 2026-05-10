@@ -10,6 +10,8 @@ import { fetchCurrentUserPreference, updateCurrentUserPreference } from '@/servi
 import { parseBackendErrorMessage } from '@/utils/http-error'
 import { FolderOpened, House, Key, Lock, User } from '@element-plus/icons-vue'
 
+import ProjectContextBar from '@/components/project/ProjectContextBar.vue'
+
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
@@ -25,25 +27,31 @@ const menuItems = [
 
 const activeMenu = computed(() => String(route.meta.menuKey || 'home'))
 const breadcrumbs = computed(() => {
-  const items = route.matched
+  const pid = route.params.projectId
+  const projectIdStr = typeof pid === 'string' ? pid : Array.isArray(pid) ? pid[0] : ''
+  const proj = projectContext.currentProject
+
+  if (projectIdStr && proj && proj.id === Number(projectIdStr)) {
+    const base = [
+      { path: '/projects', title: '项目列表' },
+      { path: `/projects/${projectIdStr}`, title: proj.name },
+    ]
+    const name = route.name
+    if (name === 'ProjectOverview') return base
+    if (name === 'ProjectMembers') return [...base, { path: route.path, title: '成员' }]
+    if (name === 'IssueList') return [...base, { path: route.path, title: '任务' }]
+    if (name === 'IssueDetail') return [...base, { path: route.path, title: '任务详情' }]
+  }
+
+  return route.matched
     .map((item: { path: string; meta: { title?: unknown } }) => ({
       path: item.path,
       title: item.meta.title ? String(item.meta.title) : '',
     }))
     .filter((item: { title: string }) => Boolean(item.title))
-
-  if (route.name === 'ProjectOverview' && projectContext.currentProject) {
-    const next = [...items]
-    if (next.length > 0) {
-      next[next.length - 1] = {
-        path: route.path,
-        title: projectContext.currentProject.name,
-      }
-    }
-    return next
-  }
-  return items
 })
+
+const showProjectChrome = computed(() => Boolean(route.params.projectId))
 
 /** 仅多级路径时显示面包屑，避免与侧栏重复「首页 / 一级模块名」 */
 const showBreadcrumb = computed(() => breadcrumbs.value.length > 1)
@@ -211,11 +219,16 @@ async function submitMyPreference() {
 
       <el-main class="main-layout__main">
         <div class="main-layout__content">
-          <el-breadcrumb v-if="showBreadcrumb" class="main-layout__breadcrumb" separator="/">
+          <el-breadcrumb
+            v-if="showBreadcrumb && !showProjectChrome"
+            class="main-layout__breadcrumb"
+            separator="/"
+          >
             <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
               {{ item.title }}
             </el-breadcrumb-item>
           </el-breadcrumb>
+          <ProjectContextBar v-if="showProjectChrome" />
           <router-view />
         </div>
       </el-main>

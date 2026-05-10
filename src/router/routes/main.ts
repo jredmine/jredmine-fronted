@@ -14,6 +14,12 @@ export const mainRoutes: RouteRecordRaw[] = [
         meta: { title: '首页', menuKey: 'home' },
       },
       {
+        path: 'account',
+        name: 'MyAccount',
+        component: () => import('@/views/account/MyAccountView.vue'),
+        meta: { title: '我的账号', menuKey: 'account' },
+      },
+      {
         path: 'issues',
         name: 'IssueGlobalList',
         component: () => import('@/views/issues/IssueListView.vue'),

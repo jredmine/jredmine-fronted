@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
+import type { UserDetail } from '@/types/rbac'
 import type { UserInfo, UserLoginResponse } from '@/types/user'
 
 const TOKEN_KEY = 'jredmine_access_token'
@@ -45,6 +46,20 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(USER_KEY)
   }
 
+  /** 个人资料保存后与顶部展示名、本地会话对齐 */
+  function syncUserFromDetail(detail: UserDetail) {
+    user.value = {
+      id: detail.id,
+      login: detail.login,
+      firstname: detail.firstname,
+      lastname: detail.lastname,
+      email: detail.email ?? null,
+      admin: detail.admin ?? null,
+      status: detail.status ?? null,
+    }
+    localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+  }
+
   return {
     accessToken,
     user,
@@ -52,5 +67,6 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     applyLoginPayload,
     clearSession,
+    syncUserFromDetail,
   }
 })

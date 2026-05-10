@@ -78,6 +78,8 @@ export interface UserDetail {
   createdOn: string | null
   updatedOn: string | null
   mailNotification: string | null
+  /** 主邮箱（详情接口补充） */
+  email?: string | null
 }
 
 export interface UserCreateRequest {
@@ -117,5 +119,14 @@ export interface UserPreferenceUpdateRequest {
   hideMail?: boolean
   timeZone?: string
   others?: string
+}
+
+/** 当前用户自助更新资料（PUT /api/users/me） */
+export interface UserSelfUpdateRequest {
+  firstname?: string
+  lastname?: string
+  email?: string
+  language?: string
+  mailNotification?: string
 }
 

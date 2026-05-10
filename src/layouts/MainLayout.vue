@@ -6,7 +6,6 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectContextStore } from '@/stores/project-context'
 import { changePasswordApi } from '@/services/auth'
-import { fetchCurrentUserPreference, updateCurrentUserPreference } from '@/services/users'
 import { parseBackendErrorMessage } from '@/utils/http-error'
 import { Document, FolderOpened, House, Key, Lock, User } from '@element-plus/icons-vue'
 
@@ -26,7 +25,11 @@ const menuItems = [
   { key: 'admin-permissions', name: 'AdminPermissions', title: '权限列表', icon: Lock },
 ]
 
-const activeMenu = computed(() => String(route.meta.menuKey || 'home'))
+const activeMenu = computed(() => {
+  const k = route.meta.menuKey as string | undefined
+  if (k === 'account') return ''
+  return String(k ?? 'home')
+})
 const breadcrumbs = computed(() => {
   const pid = route.params.projectId
   const projectIdStr = typeof pid === 'string' ? pid : Array.isArray(pid) ? pid[0] : ''
@@ -136,61 +139,6 @@ async function submitChangePassword() {
   }
 }
 
-const myPrefDialogVisible = ref(false)
-const myPrefFormRef = ref<FormInstance>()
-const myPrefLoading = ref(false)
-const myPrefForm = reactive({
-  hideMail: false,
-  timeZone: 'Asia/Shanghai',
-  others: '',
-})
-
-const timeZoneOptions = [
-  { value: 'Asia/Shanghai', label: 'Asia/Shanghai' },
-  { value: 'Asia/Hong_Kong', label: 'Asia/Hong_Kong' },
-  { value: 'Asia/Tokyo', label: 'Asia/Tokyo' },
-  { value: 'UTC', label: 'UTC' },
-]
-
-const myPrefRules: FormRules = {
-  timeZone: [{ required: true, message: '请输入时区', trigger: 'blur' }],
-}
-
-async function openMyPreference() {
-  myPrefDialogVisible.value = true
-  myPrefLoading.value = true
-  try {
-    const pref = await fetchCurrentUserPreference()
-    myPrefForm.hideMail = Boolean(pref.hideMail)
-    myPrefForm.timeZone = pref.timeZone ?? 'Asia/Shanghai'
-    myPrefForm.others = pref.others ?? ''
-  } catch (e) {
-    ElMessage.error(parseBackendErrorMessage(e, '加载偏好设置失败'))
-  } finally {
-    myPrefLoading.value = false
-  }
-}
-
-async function submitMyPreference() {
-  if (!myPrefFormRef.value) return
-  const valid = await myPrefFormRef.value.validate().catch(() => false)
-  if (!valid) return
-
-  myPrefLoading.value = true
-  try {
-    await updateCurrentUserPreference({
-      hideMail: myPrefForm.hideMail,
-      timeZone: myPrefForm.timeZone,
-      others: myPrefForm.others || undefined,
-    })
-    ElMessage.success('偏好设置已更新')
-    myPrefDialogVisible.value = false
-  } catch (e) {
-    ElMessage.error(parseBackendErrorMessage(e, '更新偏好设置失败'))
-  } finally {
-    myPrefLoading.value = false
-  }
-}
 </script>
 
 <template>
@@ -202,7 +150,7 @@ async function submitMyPreference() {
       </div>
       <div v-if="auth.isAuthenticated" class="main-layout__user">
         <span class="main-layout__name">{{ auth.displayName }}</span>
-        <el-button link type="primary" @click="openMyPreference">我的偏好</el-button>
+        <el-button link type="primary" tag="router-link" :to="{ name: 'MyAccount' }">我的账号</el-button>
         <el-button link type="primary" @click="openChangePassword">修改密码</el-button>
         <el-button link type="primary" @click="logout">退出</el-button>
       </div>
@@ -265,26 +213,6 @@ async function submitMyPreference() {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="myPrefDialogVisible" title="我的偏好" width="520px" append-to-body :close-on-click-modal="false">
-      <el-form ref="myPrefFormRef" :model="myPrefForm" :rules="myPrefRules" label-position="top" v-loading="myPrefLoading">
-        <el-form-item label="隐藏邮箱">
-          <el-switch v-model="myPrefForm.hideMail" />
-        </el-form-item>
-        <el-form-item label="时区" prop="timeZone">
-          <el-select v-model="myPrefForm.timeZone" filterable allow-create default-first-option style="width: 100%">
-            <el-option v-for="tz in timeZoneOptions" :key="tz.value" :label="tz.label" :value="tz.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="其他设置（JSON）">
-          <el-input v-model="myPrefForm.others" type="textarea" :rows="4" placeholder="可选" />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="myPrefDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="myPrefLoading" @click="submitMyPreference">保存</el-button>
-      </template>
-    </el-dialog>
   </el-container>
 </template>
 

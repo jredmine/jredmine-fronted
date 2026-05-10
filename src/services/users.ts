@@ -5,6 +5,7 @@ import type {
   UserListItem,
   UserPreference,
   UserPreferenceUpdateRequest,
+  UserSelfUpdateRequest,
   UserStatusUpdateRequest,
   UserUpdateRequest,
 } from '@/types/rbac'
@@ -48,6 +49,11 @@ export async function deleteUser(id: number): Promise<void> {
 export async function fetchCurrentUser(): Promise<UserDetail> {
   const { data } = await http.get<ApiResponse<UserDetail>>('/api/users/me')
   return unwrapApiBody(data, '加载当前用户失败')
+}
+
+export async function updateCurrentUserProfile(payload: UserSelfUpdateRequest): Promise<UserDetail> {
+  const { data } = await http.put<ApiResponse<UserDetail>>('/api/users/me', payload)
+  return unwrapApiBody(data, '更新个人资料失败')
 }
 
 export async function fetchUserPreference(id: number): Promise<UserPreference> {

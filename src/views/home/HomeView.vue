@@ -8,7 +8,9 @@ const auth = useAuthStore()
   <el-card class="jr-panel" shadow="never">
     <div class="home-welcome">
       <h1 class="home-welcome__title">欢迎回来</h1>
-      <p class="home-welcome__lead">应用壳与导航已就绪，可从左侧进入项目列表。</p>
+      <p class="home-welcome__lead">
+        应用壳与导航已就绪：可从左侧进入「项目列表」，或通过「问题」查看您在可见项目中的全部问题。
+      </p>
       <p v-if="auth.user" class="home-welcome__meta">
         当前用户：<strong>{{ auth.user.login }}</strong>
         <template v-if="auth.user.email">（{{ auth.user.email }}）</template>

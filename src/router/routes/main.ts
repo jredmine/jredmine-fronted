@@ -14,6 +14,12 @@ export const mainRoutes: RouteRecordRaw[] = [
         meta: { title: '首页', menuKey: 'home' },
       },
       {
+        path: 'issues',
+        name: 'IssueGlobalList',
+        component: () => import('@/views/issues/IssueListView.vue'),
+        meta: { title: '问题', menuKey: 'issues' },
+      },
+      {
         path: 'projects',
         name: 'ProjectList',
         component: () => import('@/views/projects/ProjectListView.vue'),
@@ -35,13 +41,13 @@ export const mainRoutes: RouteRecordRaw[] = [
         path: 'projects/:projectId/issues',
         name: 'IssueList',
         component: () => import('@/views/issues/IssueListView.vue'),
-        meta: { title: '任务', menuKey: 'projects' },
+        meta: { title: '问题', menuKey: 'issues' },
       },
       {
         path: 'projects/:projectId/issues/:issueId',
         name: 'IssueDetail',
         component: () => import('@/views/issues/IssueDetailView.vue'),
-        meta: { title: '任务详情', menuKey: 'projects' },
+        meta: { title: '问题详情', menuKey: 'issues' },
       },
       {
         path: 'admin/users',

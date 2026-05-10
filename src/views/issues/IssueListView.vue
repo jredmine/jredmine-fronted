@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
@@ -26,10 +26,13 @@ const query = ref({
   sortOrder: 'desc' as 'asc' | 'desc',
 })
 
-const projectId = computed(() => {
+/** 路由中的项目 ID（项目内列表）；全局列表无此项 */
+const routeProjectId = computed(() => {
   const id = Number(route.params.projectId)
   return Number.isNaN(id) ? null : id
 })
+
+const isGlobalList = computed(() => route.name === 'IssueGlobalList')
 
 const createVisible = ref(false)
 
@@ -38,13 +41,16 @@ function openCreate() {
 }
 
 function goDetail(row: IssueListItem) {
-  const pid = projectId.value
-  if (pid == null) return
+  const pid = routeProjectId.value ?? row.projectId
+  if (pid == null) {
+    ElMessage.warning('无法解析问题所属项目')
+    return
+  }
   void router.push({ name: 'IssueDetail', params: { projectId: String(pid), issueId: String(row.id) } })
 }
 
 async function loadProjectContext() {
-  const pid = projectId.value
+  const pid = routeProjectId.value
   if (pid == null) return
   try {
     const d = await fetchProjectDetail(pid)
@@ -55,12 +61,13 @@ async function loadProjectContext() {
 }
 
 async function loadList() {
-  const pid = projectId.value
-  if (pid == null) return
+  const scopedPid = routeProjectId.value
+  if (!isGlobalList.value && scopedPid == null) return
+
   loading.value = true
   try {
     const page = await fetchIssueList({
-      projectId: pid,
+      ...(scopedPid != null ? { projectId: scopedPid } : {}),
       current: query.value.current,
       size: query.value.size,
       keyword: query.value.keyword || undefined,
@@ -70,7 +77,7 @@ async function loadList() {
     records.value = page.records ?? []
     total.value = page.total ?? 0
   } catch (e) {
-    ElMessage.error(parseBackendErrorMessage(e, '加载任务列表失败'))
+    ElMessage.error(parseBackendErrorMessage(e, '加载问题列表失败'))
   } finally {
     loading.value = false
   }
@@ -82,7 +89,7 @@ function onCreateSuccess() {
 }
 
 watch(
-  () => route.params.projectId,
+  () => [route.name, route.params.projectId] as const,
   () => {
     query.value.current = 1
     void loadProjectContext()
@@ -90,22 +97,22 @@ watch(
   },
   { immediate: true },
 )
-
-onMounted(() => {
-  void loadProjectContext()
-})
 </script>
 
 <template>
   <el-card class="jr-panel" shadow="never">
     <template #header>
       <div class="list-header">
-        <span>任务</span>
+        <span>问题</span>
         <div class="list-header__actions">
-          <el-button type="primary" :disabled="projectId == null" @click="openCreate">新建任务</el-button>
+          <el-button type="primary" @click="openCreate">新建问题</el-button>
         </div>
       </div>
     </template>
+
+    <p v-if="isGlobalList" class="list-scope-hint">
+      列出您在相关项目中可见的全部问题（后端按权限过滤）；新建时可自由选择目标项目。
+    </p>
 
     <div class="list-toolbar">
       <el-input
@@ -130,6 +137,7 @@ onMounted(() => {
 
     <el-table v-loading="loading" :data="records" stripe style="width: 100%">
       <el-table-column prop="id" label="#" width="90" />
+      <el-table-column v-if="isGlobalList" prop="projectName" label="项目" min-width="140" show-overflow-tooltip />
       <el-table-column prop="trackerName" label="跟踪器" width="120" show-overflow-tooltip />
       <el-table-column prop="subject" label="标题" min-width="260" show-overflow-tooltip>
         <template #default="{ row }">
@@ -160,7 +168,7 @@ onMounted(() => {
       />
     </div>
 
-    <IssueFormDialog v-model="createVisible" :project-id="projectId" @success="onCreateSuccess" />
+    <IssueFormDialog v-model="createVisible" :project-id="routeProjectId" @success="onCreateSuccess" />
   </el-card>
 </template>
 
@@ -177,6 +185,13 @@ onMounted(() => {
   gap: 8px;
 }
 
+.list-scope-hint {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+}
+
 .list-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -190,4 +205,3 @@ onMounted(() => {
   justify-content: flex-end;
 }
 </style>
-

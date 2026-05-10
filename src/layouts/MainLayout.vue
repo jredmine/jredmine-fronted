@@ -8,7 +8,7 @@ import { useProjectContextStore } from '@/stores/project-context'
 import { changePasswordApi } from '@/services/auth'
 import { fetchCurrentUserPreference, updateCurrentUserPreference } from '@/services/users'
 import { parseBackendErrorMessage } from '@/utils/http-error'
-import { FolderOpened, House, Key, Lock, User } from '@element-plus/icons-vue'
+import { Document, FolderOpened, House, Key, Lock, User } from '@element-plus/icons-vue'
 
 import ProjectContextBar from '@/components/project/ProjectContextBar.vue'
 
@@ -20,6 +20,7 @@ const projectContext = useProjectContextStore()
 const menuItems = [
   { key: 'home', name: 'Home', title: '首页', icon: House },
   { key: 'projects', name: 'ProjectList', title: '项目列表', icon: FolderOpened },
+  { key: 'issues', name: 'IssueGlobalList', title: '问题', icon: Document },
   { key: 'admin-users', name: 'AdminUsers', title: '用户管理', icon: User },
   { key: 'admin-roles', name: 'AdminRoles', title: '角色管理', icon: Key },
   { key: 'admin-permissions', name: 'AdminPermissions', title: '权限列表', icon: Lock },
@@ -39,8 +40,8 @@ const breadcrumbs = computed(() => {
     const name = route.name
     if (name === 'ProjectOverview') return base
     if (name === 'ProjectMembers') return [...base, { path: route.path, title: '成员' }]
-    if (name === 'IssueList') return [...base, { path: route.path, title: '任务' }]
-    if (name === 'IssueDetail') return [...base, { path: route.path, title: '任务详情' }]
+    if (name === 'IssueList') return [...base, { path: route.path, title: '问题' }]
+    if (name === 'IssueDetail') return [...base, { path: route.path, title: '问题详情' }]
   }
 
   return route.matched

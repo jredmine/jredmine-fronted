@@ -3,13 +3,16 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 
 import { createIssue } from '@/services/issues'
+import { fetchProjectList } from '@/services/projects'
 import { fetchTrackerList } from '@/services/trackers'
 import { parseBackendErrorMessage } from '@/utils/http-error'
 import type { IssueCreatePayload } from '@/types/issue'
+import type { ProjectListItem } from '@/types/project'
 import type { TrackerListItem } from '@/types/tracker'
 
 const props = defineProps<{
   modelValue: boolean
+  /** 已定时锁定目标项目；为空时表示需在表单中选择项目（如全局问题列表） */
   projectId: number | null
 }>()
 
@@ -29,6 +32,11 @@ const formRef = ref<FormInstance>()
 const trackersLoading = ref(false)
 const trackers = ref<TrackerListItem[]>([])
 
+const projectsLoading = ref(false)
+const projectOptions = ref<ProjectListItem[]>([])
+
+const needsProjectPick = computed(() => props.projectId == null)
+
 const form = reactive<IssueCreatePayload>({
   projectId: 0,
   trackerId: 0,
@@ -43,11 +51,24 @@ const form = reactive<IssueCreatePayload>({
   isPrivate: false,
 })
 
-const rules: FormRules<IssueCreatePayload> = {
+const rules = computed<FormRules<IssueCreatePayload>>(() => ({
+  projectId: needsProjectPick.value
+    ? [
+        {
+          required: true,
+          validator: (_rule, value, callback) => {
+            const n = Number(value)
+            if (!n || n < 1) callback(new Error('请选择项目'))
+            else callback()
+          },
+          trigger: 'change',
+        },
+      ]
+    : [],
   trackerId: [{ required: true, message: '请选择跟踪器', trigger: 'change' }],
   subject: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   priorityId: [{ required: true, message: '请输入优先级 ID', trigger: 'blur' }],
-}
+}))
 
 function resetForm() {
   form.projectId = props.projectId ?? 0
@@ -76,15 +97,30 @@ async function loadTrackers() {
   }
 }
 
+async function loadProjectOptions() {
+  if (props.projectId != null) return
+  projectsLoading.value = true
+  try {
+    const page = await fetchProjectList({ current: 1, size: 500 })
+    projectOptions.value = page.records ?? []
+  } catch (e) {
+    ElMessage.error(parseBackendErrorMessage(e, '加载项目列表失败'))
+  } finally {
+    projectsLoading.value = false
+  }
+}
+
 async function submit() {
   if (!formRef.value) return
-  if (props.projectId == null) {
-    ElMessage.warning('缺少项目 ID')
-    return
-  }
-  form.projectId = props.projectId
 
   await formRef.value.validate()
+
+  const pid = props.projectId ?? Number(form.projectId)
+  if (!pid || pid < 1) {
+    ElMessage.warning('请选择项目')
+    return
+  }
+  form.projectId = pid
 
   saving.value = true
   try {
@@ -101,11 +137,11 @@ async function submit() {
       doneRatio: form.doneRatio != null ? Number(form.doneRatio) : undefined,
       isPrivate: Boolean(form.isPrivate),
     })
-    ElMessage.success('任务创建成功')
+    ElMessage.success('问题创建成功')
     emit('success')
     visible.value = false
   } catch (e) {
-    ElMessage.error(parseBackendErrorMessage(e, '创建任务失败'))
+    ElMessage.error(parseBackendErrorMessage(e, '创建问题失败'))
   } finally {
     saving.value = false
   }
@@ -117,18 +153,35 @@ watch(
     if (v) {
       resetForm()
       void loadTrackers()
+      void loadProjectOptions()
     }
   },
 )
 
 onMounted(() => {
-  if (visible.value) void loadTrackers()
+  if (visible.value) {
+    void loadTrackers()
+    void loadProjectOptions()
+  }
 })
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="新建任务" width="720px" destroy-on-close>
+  <el-dialog v-model="visible" title="新建问题" width="720px" destroy-on-close>
     <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+      <el-form-item v-if="needsProjectPick" label="项目" prop="projectId">
+        <el-select
+          v-model="form.projectId"
+          style="width: 100%"
+          filterable
+          clearable
+          :loading="projectsLoading"
+          placeholder="请选择项目"
+        >
+          <el-option v-for="p in projectOptions" :key="p.id" :label="p.name" :value="p.id" />
+        </el-select>
+      </el-form-item>
+
       <el-form-item label="跟踪器" prop="trackerId">
         <el-select
           v-model="form.trackerId"
@@ -142,7 +195,7 @@ onMounted(() => {
       </el-form-item>
 
       <el-form-item label="标题" prop="subject">
-        <el-input v-model="form.subject" maxlength="255" show-word-limit placeholder="请输入任务标题" />
+        <el-input v-model="form.subject" maxlength="255" show-word-limit placeholder="请输入问题标题" />
       </el-form-item>
 
       <el-form-item label="描述">
@@ -203,4 +256,3 @@ onMounted(() => {
   color: var(--el-text-color-secondary);
 }
 </style>
-

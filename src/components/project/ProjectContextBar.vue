@@ -28,7 +28,7 @@ const projectIdNum = computed(() => {
 
 const tabs = [
   { routeName: 'ProjectOverview' as const, label: '概览' },
-  { routeName: 'IssueList' as const, label: '任务' },
+  { routeName: 'IssueList' as const, label: '问题' },
   { routeName: 'ProjectMembers' as const, label: '成员' },
 ]
 

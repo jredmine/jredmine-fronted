@@ -442,7 +442,7 @@ onMounted(() => {
           <el-form-item label="管理所有角色">
             <el-switch v-model="roleForm.allRolesManaged" />
           </el-form-item>
-          <el-form-item label="任务可见性">
+          <el-form-item label="问题可见性">
             <el-select v-model="roleForm.issuesVisibility" style="width: 100%">
               <el-option label="默认" value="default" />
               <el-option label="全部" value="all" />

@@ -5,16 +5,16 @@ import { unwrapApiBody } from '@/utils/api-unwrap'
 
 export async function fetchIssueList(params: IssueListQuery): Promise<PageResponse<IssueListItem>> {
   const { data } = await http.get<ApiResponse<PageResponse<IssueListItem>>>('/api/issues', { params })
-  return unwrapApiBody(data, '加载任务列表失败')
+  return unwrapApiBody(data, '加载问题列表失败')
 }
 
 export async function fetchIssueDetail(id: number): Promise<IssueDetail> {
   const { data } = await http.get<ApiResponse<IssueDetail>>(`/api/issues/${id}`)
-  return unwrapApiBody(data, '加载任务详情失败')
+  return unwrapApiBody(data, '加载问题详情失败')
 }
 
 export async function createIssue(payload: IssueCreatePayload): Promise<IssueDetail> {
   const { data } = await http.post<ApiResponse<IssueDetail>>('/api/issues', payload)
-  return unwrapApiBody(data, '创建任务失败')
+  return unwrapApiBody(data, '创建问题失败')
 }
 

@@ -44,7 +44,7 @@ async function loadDetail() {
   try {
     detail.value = await fetchIssueDetail(id)
   } catch (e) {
-    ElMessage.error(parseBackendErrorMessage(e, '加载任务详情失败'))
+    ElMessage.error(parseBackendErrorMessage(e, '加载问题详情失败'))
     detail.value = null
   } finally {
     loading.value = false
@@ -65,7 +65,7 @@ watch(
   <el-card v-loading="loading" class="jr-panel" shadow="never">
     <template #header>
       <div class="detail-header">
-        <span>任务详情</span>
+        <span>问题详情</span>
         <div class="detail-header__actions">
           <el-button
             :disabled="projectId == null"

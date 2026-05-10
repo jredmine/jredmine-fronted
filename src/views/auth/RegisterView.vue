@@ -67,7 +67,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <el-card class="register-card" shadow="hover">
+  <el-card class="register-card jr-auth-card" shadow="hover">
     <template #header>
       <span>注册</span>
     </template>

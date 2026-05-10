@@ -46,7 +46,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <el-card class="login-card" shadow="hover">
+  <el-card class="login-card jr-auth-card" shadow="hover">
     <template #header>
       <span>登录</span>
     </template>

@@ -96,7 +96,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <el-card shadow="never">
+  <el-card class="jr-panel" shadow="never">
     <template #header>
       <div class="list-header">
         <span>项目列表</span>

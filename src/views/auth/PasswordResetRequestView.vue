@@ -41,7 +41,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <el-card class="reset-card" shadow="hover">
+  <el-card class="reset-card jr-auth-card" shadow="hover">
     <template #header>
       <span>找回密码</span>
     </template>

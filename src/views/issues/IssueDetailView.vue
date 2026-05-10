@@ -62,7 +62,7 @@ watch(
 </script>
 
 <template>
-  <el-card v-loading="loading" shadow="never">
+  <el-card v-loading="loading" class="jr-panel" shadow="never">
     <template #header>
       <div class="detail-header">
         <span>任务详情</span>

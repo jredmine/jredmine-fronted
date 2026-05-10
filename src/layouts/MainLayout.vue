@@ -8,6 +8,7 @@ import { useProjectContextStore } from '@/stores/project-context'
 import { changePasswordApi } from '@/services/auth'
 import { fetchCurrentUserPreference, updateCurrentUserPreference } from '@/services/users'
 import { parseBackendErrorMessage } from '@/utils/http-error'
+import { FolderOpened, House, Key, Lock, User } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,11 +16,11 @@ const auth = useAuthStore()
 const projectContext = useProjectContextStore()
 
 const menuItems = [
-  { key: 'home', name: 'Home', title: '首页' },
-  { key: 'projects', name: 'ProjectList', title: '项目列表' },
-  { key: 'admin-users', name: 'AdminUsers', title: '用户管理' },
-  { key: 'admin-roles', name: 'AdminRoles', title: '角色管理' },
-  { key: 'admin-permissions', name: 'AdminPermissions', title: '权限列表' },
+  { key: 'home', name: 'Home', title: '首页', icon: House },
+  { key: 'projects', name: 'ProjectList', title: '项目列表', icon: FolderOpened },
+  { key: 'admin-users', name: 'AdminUsers', title: '用户管理', icon: User },
+  { key: 'admin-roles', name: 'AdminRoles', title: '角色管理', icon: Key },
+  { key: 'admin-permissions', name: 'AdminPermissions', title: '权限列表', icon: Lock },
 ]
 
 const activeMenu = computed(() => String(route.meta.menuKey || 'home'))
@@ -43,6 +44,9 @@ const breadcrumbs = computed(() => {
   }
   return items
 })
+
+/** 仅多级路径时显示面包屑，避免与侧栏重复「首页 / 一级模块名」 */
+const showBreadcrumb = computed(() => breadcrumbs.value.length > 1)
 
 function gotoByName(name: string) {
   if (route.name !== name) {
@@ -182,8 +186,11 @@ async function submitMyPreference() {
 
 <template>
   <el-container class="main-layout">
-    <el-header class="main-layout__header">
-      <span class="main-layout__title">JRedmine</span>
+    <el-header class="main-layout__header" height="56px">
+      <div class="main-layout__brand">
+        <span class="main-layout__logo-mark" aria-hidden="true" />
+        <span class="main-layout__title">JRedmine</span>
+      </div>
       <div v-if="auth.isAuthenticated" class="main-layout__user">
         <span class="main-layout__name">{{ auth.displayName }}</span>
         <el-button link type="primary" @click="openMyPreference">我的偏好</el-button>
@@ -192,22 +199,25 @@ async function submitMyPreference() {
       </div>
     </el-header>
 
-    <el-container>
-      <el-aside class="main-layout__aside" width="220px">
-        <el-menu :default-active="activeMenu" @select="onMenuSelect">
+    <el-container class="main-layout__body">
+      <el-aside class="main-layout__aside" width="232px">
+        <el-menu class="main-layout__menu" :default-active="activeMenu" @select="onMenuSelect">
           <el-menu-item v-for="item in menuItems" :key="item.key" :index="item.key">
-            {{ item.title }}
+            <el-icon><component :is="item.icon" /></el-icon>
+            <span>{{ item.title }}</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
 
       <el-main class="main-layout__main">
-        <el-breadcrumb class="main-layout__breadcrumb" separator="/">
-          <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
-            {{ item.title }}
-          </el-breadcrumb-item>
-        </el-breadcrumb>
-        <router-view />
+        <div class="main-layout__content">
+          <el-breadcrumb v-if="showBreadcrumb" class="main-layout__breadcrumb" separator="/">
+            <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
+              {{ item.title }}
+            </el-breadcrumb-item>
+          </el-breadcrumb>
+          <router-view />
+        </div>
       </el-main>
     </el-container>
 
@@ -267,40 +277,92 @@ async function submitMyPreference() {
 <style scoped>
 .main-layout {
   min-height: 100vh;
+  background: var(--jr-page-bg);
 }
 
 .main-layout__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--el-border-color);
+  padding: 0 24px;
+  background: #fff;
+  box-shadow: var(--jr-shadow-sm);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.main-layout__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.main-layout__logo-mark {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, var(--jr-brand) 0%, #60a5fa 100%);
 }
 
 .main-layout__title {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  color: var(--el-text-color-primary);
 }
 
 .main-layout__user {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .main-layout__name {
   font-size: 14px;
-  color: var(--el-text-color-regular);
+  color: var(--el-text-color-secondary);
+  margin-right: 4px;
+}
+
+.main-layout__body {
+  flex: 1;
+  min-height: 0;
 }
 
 .main-layout__aside {
-  border-right: 1px solid var(--el-border-color-light);
-  background: var(--el-fill-color-blank);
+  border-right: 1px solid var(--el-border-color-lighter);
+  background: #fff;
+  padding: 12px 8px 24px;
+}
+
+.main-layout__menu {
+  border-right: none;
+  background: transparent;
+}
+
+.main-layout__menu :deep(.el-menu-item) {
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.main-layout__menu :deep(.el-menu-item.is-active) {
+  background: var(--jr-brand-soft);
+  color: var(--jr-brand);
+  font-weight: 600;
 }
 
 .main-layout__main {
   width: 100%;
+  padding: 24px;
+  background: var(--jr-page-bg);
+}
+
+.main-layout__content {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .main-layout__breadcrumb {
   margin-bottom: 16px;
+  font-size: 13px;
 }
 </style>

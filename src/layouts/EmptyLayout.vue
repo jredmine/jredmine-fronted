@@ -11,6 +11,6 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: var(--el-fill-color-light);
+  background: linear-gradient(155deg, #eef2ff 0%, #f8fafc 42%, #f1f5f9 100%);
 }
 </style>

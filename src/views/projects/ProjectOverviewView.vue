@@ -105,7 +105,7 @@ function onFormSuccess() {
 </script>
 
 <template>
-  <el-card v-loading="loading" shadow="never">
+  <el-card v-loading="loading" class="jr-panel" shadow="never">
     <template #header>
       <div class="overview-header">
         <span>{{ currentProject?.name ?? '项目' }}</span>

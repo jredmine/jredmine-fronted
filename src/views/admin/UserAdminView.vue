@@ -290,7 +290,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <el-card shadow="never">
+  <el-card class="jr-panel" shadow="never">
     <template #header>
       <div class="admin-toolbar">
         <span>用户管理</span>

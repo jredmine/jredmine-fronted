@@ -2,9 +2,9 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 
-import { createProject, fetchProjectDetail, updateProject } from '@/services/projects'
+import { createProject, fetchProjectDetail, fetchProjectList, updateProject } from '@/services/projects'
 import { parseBackendErrorMessage } from '@/utils/http-error'
-import type { ProjectDetail } from '@/types/project'
+import type { ProjectDetail, ProjectListItem } from '@/types/project'
 
 const props = defineProps<{
   modelValue: boolean
@@ -19,6 +19,25 @@ const emit = defineEmits<{
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+
+const parentOptions = ref<ProjectListItem[]>([])
+const parentLoading = ref(false)
+
+async function searchParentProjects(keyword: string) {
+  parentLoading.value = true
+  try {
+    const res = await fetchProjectList({ keyword, size: 50 })
+    parentOptions.value = res.records.filter((p) => p.id !== props.projectId)
+  } catch {
+    parentOptions.value = []
+  } finally {
+    parentLoading.value = false
+  }
+}
+
+async function loadParentProjects() {
+  await searchParentProjects('')
+}
 
 const form = reactive({
   name: '',
@@ -69,6 +88,7 @@ watch(
   async ([open, mode, id]) => {
     if (!open) return
     formRef.value?.clearValidate()
+    loadParentProjects()
     if (mode === 'create') {
       resetForm()
       return
@@ -160,14 +180,24 @@ async function submit() {
       <el-form-item label="主页">
         <el-input v-model="form.homepage" placeholder="https://..." />
       </el-form-item>
-      <el-form-item label="父项目 ID（可选）">
-        <el-input-number
+      <el-form-item label="父项目（可选）">
+        <el-select
           v-model="form.parentId"
-          :min="1"
+          filterable
+          remote
           clearable
-          controls-position="right"
+          placeholder="搜索并选择父项目"
+          :remote-method="searchParentProjects"
+          :loading="parentLoading"
           style="width: 100%"
-        />
+        >
+          <el-option
+            v-for="p in parentOptions"
+            :key="p.id"
+            :label="p.name"
+            :value="p.id"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="公开项目">
         <el-switch v-model="form.isPublic" />

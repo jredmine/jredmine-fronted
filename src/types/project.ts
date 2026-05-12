@@ -27,6 +27,8 @@ export interface ProjectDetail {
   defaultVersionId: number | null
   defaultAssignedToId: number | null
   defaultIssueQueryId: number | null
+  enabledModules: string[] | null
+  trackerIds: number[] | null
 }
 
 export interface ProjectTreeNode extends ProjectListItem {

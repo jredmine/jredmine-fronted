@@ -3,8 +3,23 @@ import { ref, reactive, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 
 import { createProject, fetchProjectDetail, fetchProjectList, updateProject } from '@/services/projects'
+import { fetchTrackerList } from '@/services/trackers'
 import { parseBackendErrorMessage } from '@/utils/http-error'
 import type { ProjectDetail, ProjectListItem } from '@/types/project'
+import type { TrackerListItem } from '@/types/tracker'
+
+const MODULE_OPTIONS = [
+  { code: 'issues', label: '任务管理' },
+  { code: 'wiki', label: 'Wiki' },
+  { code: 'boards', label: '论坛' },
+  { code: 'documents', label: '文档管理' },
+  { code: 'files', label: '文件管理' },
+  { code: 'repository', label: '代码仓库' },
+  { code: 'time_tracking', label: '时间跟踪' },
+  { code: 'news', label: '新闻' },
+  { code: 'calendar', label: '日历' },
+  { code: 'gantt', label: '甘特图' },
+] as const
 
 const props = defineProps<{
   modelValue: boolean
@@ -39,6 +54,17 @@ async function loadParentProjects() {
   await searchParentProjects('')
 }
 
+const trackerOptions = ref<TrackerListItem[]>([])
+
+async function loadTrackers() {
+  try {
+    const res = await fetchTrackerList({ size: 100 })
+    trackerOptions.value = res.records
+  } catch {
+    trackerOptions.value = []
+  }
+}
+
 const form = reactive({
   name: '',
   identifier: '',
@@ -47,6 +73,8 @@ const form = reactive({
   isPublic: true,
   inheritMembers: false,
   parentId: undefined as number | undefined,
+  enabledModules: [] as string[],
+  trackerIds: [] as number[],
   status: 1 as number,
 })
 
@@ -69,6 +97,8 @@ function resetForm() {
   form.isPublic = true
   form.inheritMembers = false
   form.parentId = undefined
+  form.enabledModules = []
+  form.trackerIds = []
   form.status = 1
 }
 
@@ -80,6 +110,8 @@ function applyDetail(d: ProjectDetail) {
   form.isPublic = d.isPublic ?? true
   form.inheritMembers = d.inheritMembers ?? false
   form.parentId = d.parentId ?? undefined
+  form.enabledModules = d.enabledModules ?? []
+  form.trackerIds = d.trackerIds ?? []
   form.status = d.status ?? 1
 }
 
@@ -89,6 +121,7 @@ watch(
     if (!open) return
     formRef.value?.clearValidate()
     loadParentProjects()
+    loadTrackers()
     if (mode === 'create') {
       resetForm()
       return
@@ -127,6 +160,8 @@ async function submit() {
         isPublic: form.isPublic,
         inheritMembers: form.inheritMembers,
         parentId: form.parentId ?? undefined,
+        enabledModules: form.enabledModules.length ? form.enabledModules : undefined,
+        trackerIds: form.trackerIds.length ? form.trackerIds : undefined,
       })
       ElMessage.success('项目创建成功')
     } else if (props.projectId != null) {
@@ -138,6 +173,8 @@ async function submit() {
         isPublic: form.isPublic,
         inheritMembers: form.inheritMembers,
         parentId: form.parentId ?? undefined,
+        enabledModules: form.enabledModules.length ? form.enabledModules : undefined,
+        trackerIds: form.trackerIds.length ? form.trackerIds : undefined,
         status: form.status,
       })
       ElMessage.success('项目已更新')
@@ -196,6 +233,40 @@ async function submit() {
             :key="p.id"
             :label="p.name"
             :value="p.id"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="启用的模块">
+        <el-select
+          v-model="form.enabledModules"
+          multiple
+          collapse-tags
+          collapse-tags-tooltip
+          placeholder="选择要启用的模块"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="m in MODULE_OPTIONS"
+            :key="m.code"
+            :label="m.label"
+            :value="m.code"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="跟踪器">
+        <el-select
+          v-model="form.trackerIds"
+          multiple
+          collapse-tags
+          collapse-tags-tooltip
+          placeholder="选择跟踪器"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="t in trackerOptions"
+            :key="t.id"
+            :label="t.name"
+            :value="t.id"
           />
         </el-select>
       </el-form-item>

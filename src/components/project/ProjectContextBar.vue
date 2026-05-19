@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 
+import WikiPageCreateDialog from '@/views/projects/WikiPageCreateDialog.vue'
 import { fetchProjectDetail } from '@/services/projects'
 import { useProjectContextStore } from '@/stores/project-context'
 import { parseBackendErrorMessage } from '@/utils/http-error'
@@ -30,6 +31,7 @@ const tabs = [
   { routeName: 'ProjectOverview' as const, label: '概览' },
   { routeName: 'IssueList' as const, label: '问题' },
   { routeName: 'ProjectMembers' as const, label: '成员' },
+  { routeName: 'ProjectWiki' as const, label: 'Wiki' },
 ]
 
 const activeRouteName = computed(() => {
@@ -50,6 +52,34 @@ function goTab(routeName: (typeof tabs)[number]['routeName']) {
 
 function goProjectList() {
   void router.push({ name: 'ProjectList' })
+}
+
+const wikiCreateVisible = ref(false)
+
+const wikiModuleEnabled = computed(() => {
+  const modules = currentProject.value?.enabledModules
+  if (!modules || modules.length === 0) return true
+  return modules.includes('wiki')
+})
+
+function openWikiCreate() {
+  if (!wikiModuleEnabled.value) {
+    ElMessage.warning('当前项目未启用 Wiki 模块')
+    return
+  }
+  wikiCreateVisible.value = true
+}
+
+function onQuickAddCommand(cmd: string) {
+  if (cmd === 'wiki') openWikiCreate()
+}
+
+function onWikiCreateSuccess() {
+  ctx.notifyWikiPagesChanged()
+  if (route.name !== 'ProjectWiki') {
+    const pid = projectIdParam.value
+    if (pid) void router.push({ name: 'ProjectWiki', params: { projectId: pid } })
+  }
 }
 
 watch(
@@ -93,6 +123,16 @@ watch(
       </div>
     </div>
     <nav class="project-context__tabs" aria-label="项目功能">
+      <el-dropdown trigger="click" placement="bottom-start" @command="onQuickAddCommand">
+        <button type="button" class="project-context__quick-add" aria-label="新建">
+          <el-icon><Plus /></el-icon>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="wiki" :disabled="!wikiModuleEnabled">新建 Wiki 页面</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <button
         v-for="tab in tabs"
         :key="tab.routeName"
@@ -104,6 +144,12 @@ watch(
         {{ tab.label }}
       </button>
     </nav>
+
+    <WikiPageCreateDialog
+      v-model="wikiCreateVisible"
+      :project-id="projectIdNum"
+      @success="onWikiCreateSuccess"
+    />
   </div>
 </template>
 
@@ -161,10 +207,37 @@ watch(
 .project-context__tabs {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 4px;
   margin: 0 -4px;
   padding-bottom: 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.project-context__quick-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 4px 6px 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.project-context__quick-add:hover {
+  background: var(--el-color-primary-light-3);
+}
+
+.project-context__quick-add:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 2px;
 }
 
 .project-context__tab {

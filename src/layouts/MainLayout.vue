@@ -43,6 +43,7 @@ const breadcrumbs = computed(() => {
     const name = route.name
     if (name === 'ProjectOverview') return base
     if (name === 'ProjectMembers') return [...base, { path: route.path, title: '成员' }]
+    if (name === 'ProjectWiki') return [...base, { path: route.path, title: 'Wiki' }]
     if (name === 'IssueList') return [...base, { path: route.path, title: '问题' }]
     if (name === 'IssueDetail') return [...base, { path: route.path, title: '问题详情' }]
   }

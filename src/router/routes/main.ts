@@ -44,6 +44,12 @@ export const mainRoutes: RouteRecordRaw[] = [
         meta: { title: '成员', menuKey: 'projects' },
       },
       {
+        path: 'projects/:projectId/wiki',
+        name: 'ProjectWiki',
+        component: () => import('@/views/projects/ProjectWikiView.vue'),
+        meta: { title: 'Wiki', menuKey: 'projects' },
+      },
+      {
         path: 'projects/:projectId/issues',
         name: 'IssueList',
         component: () => import('@/views/issues/IssueListView.vue'),

@@ -47,3 +47,10 @@ export interface WikiPageCreatePayload {
   text?: string
   comments?: string
 }
+
+export interface WikiPageUpdatePayload {
+  text?: string
+  comments?: string
+  parentId?: number | null
+  isProtected?: boolean
+}

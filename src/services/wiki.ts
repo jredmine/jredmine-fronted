@@ -4,6 +4,7 @@ import type {
   WikiPageCreatePayload,
   WikiPageDetail,
   WikiPageListItem,
+  WikiPageUpdatePayload,
   WikiUpdatePayload,
 } from '@/types/wiki'
 import { http } from '@/services/http'
@@ -39,4 +40,14 @@ export async function fetchWikiPage(projectId: number, titleOrId: string | numbe
   const segment = encodeURIComponent(String(titleOrId))
   const { data } = await http.get<ApiResponse<WikiPageDetail>>(`/api/projects/${projectId}/wiki/pages/${segment}`)
   return unwrapApiBody(data, '加载 Wiki 页面失败')
+}
+
+export async function updateWikiPage(
+  projectId: number,
+  titleOrId: string | number,
+  payload: WikiPageUpdatePayload,
+): Promise<WikiPageDetail> {
+  const segment = encodeURIComponent(String(titleOrId))
+  const { data } = await http.put<ApiResponse<WikiPageDetail>>(`/api/projects/${projectId}/wiki/pages/${segment}`, payload)
+  return unwrapApiBody(data, '更新 Wiki 页面失败')
 }

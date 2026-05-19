@@ -5,10 +5,11 @@ import { storeToRefs } from 'pinia'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 
 import WikiPageCreateDialog from '@/views/projects/WikiPageCreateDialog.vue'
+import WikiPageEditDialog from '@/views/projects/WikiPageEditDialog.vue'
 import { fetchProjectWiki, fetchWikiPage, fetchWikiPageList, updateProjectWiki } from '@/services/wiki'
 import { useProjectContextStore } from '@/stores/project-context'
 import { parseBackendErrorMessage } from '@/utils/http-error'
-import { prepareWikiDisplay } from '@/utils/wiki-content'
+import { renderWikiMarkdown } from '@/utils/wiki-content'
 import type { WikiInfo, WikiPageDetail, WikiPageListItem } from '@/types/wiki'
 
 const route = useRoute()
@@ -24,6 +25,8 @@ const currentPage = ref<WikiPageDetail | null>(null)
 const viewingTitle = ref<string | null>(null)
 const startPageMissing = ref(false)
 const wikiCreateVisible = ref(false)
+const wikiEditVisible = ref(false)
+const editingTitle = ref<string | null>(null)
 const manageOpen = ref<string[]>([])
 
 const formRef = ref<FormInstance>()
@@ -40,7 +43,7 @@ const rules: FormRules = {
   startPage: [{ required: true, message: '请选择 Wiki 首页', trigger: 'change' }],
 }
 
-const pageDisplay = computed(() => prepareWikiDisplay(currentPage.value?.text))
+const pageHtml = computed(() => renderWikiMarkdown(currentPage.value?.text))
 
 function wikiStatusLabel(status: number | null | undefined) {
   if (status === 1) return '正常'
@@ -176,8 +179,24 @@ async function onWikiCreated(page: WikiPageDetail) {
   await loadPageContent(page.title)
 }
 
-function viewPage(row: WikiPageListItem) {
-  void loadPageContent(row.title)
+function openEdit(row: WikiPageListItem) {
+  editingTitle.value = row.title
+  wikiEditVisible.value = true
+}
+
+function openEditCurrent() {
+  if (!currentPage.value) return
+  openEdit({ title: currentPage.value.title } as WikiPageListItem)
+}
+
+async function onWikiEdited(page: WikiPageDetail) {
+  ctx.notifyWikiPagesChanged()
+  const id = projectId.value
+  if (id == null) return
+  await loadWikiPages(id)
+  if (viewingTitle.value === page.title) {
+    currentPage.value = page
+  }
 }
 
 watch(
@@ -226,13 +245,11 @@ watch(wikiPagesVersion, () => {
 
       <section v-loading="pageLoading" class="wiki-read">
         <template v-if="currentPage">
-          <h1 class="wiki-read__title">{{ currentPage.title }}</h1>
-          <div
-            v-if="pageDisplay.mode === 'html' && pageDisplay.content"
-            class="wiki-read__body wiki-read__body--html"
-            v-html="pageDisplay.content"
-          />
-          <pre v-else-if="pageDisplay.content" class="wiki-read__body wiki-read__body--text">{{ pageDisplay.content }}</pre>
+          <div class="wiki-read__head">
+            <h1 class="wiki-read__title">{{ currentPage.title }}</h1>
+            <el-button link type="primary" @click="openEditCurrent">编辑</el-button>
+          </div>
+          <div v-if="pageHtml" class="wiki-read__body wiki-read__body--md" v-html="pageHtml" />
           <p v-else class="wiki-read__empty">此页面暂无正文。</p>
           <p class="wiki-read__meta">
             由 {{ currentPage.authorName || '—' }} 更新于 {{ formatDateTime(currentPage.updatedOn) }}
@@ -248,16 +265,10 @@ watch(wikiPagesVersion, () => {
 
       <el-collapse v-model="manageOpen" class="wiki-manage">
         <el-collapse-item title="页面列表与管理" name="manage">
-          <el-table
-            :data="pageOptions"
-            stripe
-            highlight-current-row
-            empty-text="暂无 Wiki 页面"
-            @row-click="viewPage"
-          >
+          <el-table :data="pageOptions" stripe empty-text="暂无 Wiki 页面">
             <el-table-column prop="title" label="标题" min-width="160">
               <template #default="{ row }">
-                <el-button link type="primary" @click.stop="viewPage(row)">{{ row.title }}</el-button>
+                <el-button link type="primary" @click="openEdit(row)">{{ row.title }}</el-button>
               </template>
             </el-table-column>
             <el-table-column label="保护" width="80">
@@ -302,6 +313,12 @@ watch(wikiPagesVersion, () => {
     <el-empty v-else-if="!loading" description="无法加载 Wiki 信息（请确认项目已启用 Wiki 模块）" />
 
     <WikiPageCreateDialog v-model="wikiCreateVisible" :project-id="projectId" @success="onWikiCreated" />
+    <WikiPageEditDialog
+      v-model="wikiEditVisible"
+      :project-id="projectId"
+      :page-title="editingTitle"
+      @success="onWikiEdited"
+    />
   </el-card>
 </template>
 
@@ -324,30 +341,89 @@ watch(wikiPagesVersion, () => {
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
+.wiki-read__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .wiki-read__title {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
   line-height: 1.3;
 }
 
-.wiki-read__body--html :deep(h1),
-.wiki-read__body--html :deep(h2),
-.wiki-read__body--html :deep(h3) {
-  margin: 0.75em 0 0.35em;
-}
-
-.wiki-read__body--html :deep(p) {
-  margin: 0.5em 0;
-}
-
-.wiki-read__body--text {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
+.wiki-read__body--md {
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
+.wiki-read__body--md :deep(h1),
+.wiki-read__body--md :deep(h2),
+.wiki-read__body--md :deep(h3),
+.wiki-read__body--md :deep(h4) {
+  margin: 1em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.wiki-read__body--md :deep(h1) {
+  font-size: 1.35em;
+}
+
+.wiki-read__body--md :deep(p) {
+  margin: 0.6em 0;
+}
+
+.wiki-read__body--md :deep(ul),
+.wiki-read__body--md :deep(ol) {
+  margin: 0.6em 0;
+  padding-left: 1.5em;
+}
+
+.wiki-read__body--md :deep(blockquote) {
+  margin: 0.6em 0;
+  padding: 0.25em 0 0.25em 1em;
+  border-left: 4px solid var(--el-border-color);
+  color: var(--el-text-color-secondary);
+}
+
+.wiki-read__body--md :deep(pre) {
+  margin: 0.75em 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--el-fill-color-light);
+}
+
+.wiki-read__body--md :deep(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.wiki-read__body--md :deep(:not(pre) > code) {
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background: var(--el-fill-color-light);
+}
+
+.wiki-read__body--md :deep(table) {
+  border-collapse: collapse;
+  margin: 0.75em 0;
+}
+
+.wiki-read__body--md :deep(th),
+.wiki-read__body--md :deep(td) {
+  border: 1px solid var(--el-border-color-lighter);
+  padding: 6px 10px;
+}
+
+.wiki-read__body--md :deep(a) {
+  color: var(--el-color-primary);
 }
 
 .wiki-read__empty {

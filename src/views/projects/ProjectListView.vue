@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 import ProjectFormDialog from '@/views/projects/ProjectFormDialog.vue'
-import { fetchProjectList, fetchProjectTree } from '@/services/projects'
+import { deleteProject, fetchProjectList, fetchProjectTree } from '@/services/projects'
 import { parseBackendErrorMessage } from '@/utils/http-error'
 import type { ProjectListItem, ProjectTreeNode } from '@/types/project'
 
@@ -99,6 +99,30 @@ function onDialogSuccess() {
   void loadList()
 }
 
+async function onDelete(row: ProjectListItem) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除项目「${row.name}」？删除后将归档该项目；若存在未归档的子项目则无法删除。`,
+      '提示',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+      },
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deleteProject(row.id)
+    ElMessage.success('项目已删除')
+    void loadList()
+  } catch (e) {
+    ElMessage.error(parseBackendErrorMessage(e, '删除项目失败'))
+  }
+}
+
 onMounted(() => {
   void loadList()
 })
@@ -153,10 +177,11 @@ onMounted(() => {
           {{ formatCreatedOn(row.createdOn) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="goProject(row)">进入</el-button>
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+          <el-button v-if="row.status !== 9" link type="danger" @click="onDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

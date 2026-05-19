@@ -9,7 +9,7 @@ import type {
   ProjectUpdatePayload,
 } from '@/types/project'
 import { http } from '@/services/http'
-import { unwrapApiBody } from '@/utils/api-unwrap'
+import { unwrapApiBody, unwrapApiOk } from '@/utils/api-unwrap'
 
 export async function fetchProjectList(params: ProjectListQuery): Promise<PageResponse<ProjectListItem>> {
   const { data } = await http.get<ApiResponse<PageResponse<ProjectListItem>>>('/api/projects', { params })
@@ -36,6 +36,11 @@ export async function createProject(payload: ProjectCreatePayload): Promise<Proj
 export async function updateProject(id: number, payload: ProjectUpdatePayload): Promise<ProjectDetail> {
   const { data } = await http.put<ApiResponse<ProjectDetail>>(`/api/projects/${id}`, payload)
   return unwrapApiBody(data, '更新项目失败')
+}
+
+export async function deleteProject(id: number): Promise<void> {
+  const { data } = await http.delete<ApiResponse<unknown>>(`/api/projects/${id}`)
+  unwrapApiOk(data, '删除项目失败')
 }
 
 export async function fetchProjectMembers(

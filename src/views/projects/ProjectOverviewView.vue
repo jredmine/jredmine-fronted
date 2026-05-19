@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 import ProjectFormDialog from '@/views/projects/ProjectFormDialog.vue'
-import { fetchProjectDetail } from '@/services/projects'
+import { deleteProject, fetchProjectDetail } from '@/services/projects'
 import { useProjectContextStore } from '@/stores/project-context'
 import { parseBackendErrorMessage } from '@/utils/http-error'
 
 const route = useRoute()
+const router = useRouter()
 const ctx = useProjectContextStore()
 const { currentProject } = storeToRefs(ctx)
 
@@ -49,6 +50,35 @@ function openEdit() {
 function onFormSuccess() {
   void refreshDetail()
 }
+
+async function onDelete() {
+  const project = currentProject.value
+  const id = projectId.value
+  if (!project || id == null) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确认删除项目「${project.name}」？删除后将归档该项目；若存在未归档的子项目则无法删除。`,
+      '提示',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+      },
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deleteProject(id)
+    ElMessage.success('项目已删除')
+    ctx.clear()
+    void router.push({ name: 'ProjectList' })
+  } catch (e) {
+    ElMessage.error(parseBackendErrorMessage(e, '删除项目失败'))
+  }
+}
 </script>
 
 <template>
@@ -58,6 +88,15 @@ function onFormSuccess() {
         <span>概览</span>
         <div class="overview-header__actions">
           <el-button type="primary" :disabled="projectId == null" @click="openEdit">编辑项目</el-button>
+          <el-button
+            v-if="currentProject && currentProject.status !== 9"
+            type="danger"
+            plain
+            :disabled="projectId == null"
+            @click="onDelete"
+          >
+            删除项目
+          </el-button>
         </div>
       </div>
     </template>

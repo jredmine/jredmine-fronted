@@ -41,6 +41,15 @@ function statusTagType(status: number | null | undefined) {
   return undefined
 }
 
+/** 展示为 YYYY-MM-DD HH:mm（本地时区） */
+function formatCreatedOn(raw: string | null | undefined): string {
+  if (raw == null || raw === '') return '—'
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return String(raw)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 async function loadList() {
   loading.value = true
   try {
@@ -139,6 +148,11 @@ onMounted(() => {
         </template>
       </el-table-column>
       <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
+      <el-table-column label="创建时间" width="160">
+        <template #default="{ row }">
+          {{ formatCreatedOn(row.createdOn) }}
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="goProject(row)">进入</el-button>

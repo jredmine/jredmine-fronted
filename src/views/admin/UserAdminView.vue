@@ -255,6 +255,7 @@ async function submitPreference() {
 }
 
 async function onChangeStatus(row: UserListItem, status: number) {
+  if (row.status === status) return
   try {
     await updateUserStatus(row.id, { status })
     ElMessage.success('状态已更新')
@@ -317,7 +318,12 @@ onMounted(() => {
             <span class="status-link">{{ statusLabel(row.status) }}</span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item v-for="s in statusOptions" :key="s.value" :command="s.value">
+                <el-dropdown-item
+                  v-for="s in statusOptions"
+                  :key="s.value"
+                  :command="s.value"
+                  :disabled="row.status === s.value"
+                >
                   {{ s.label }}
                 </el-dropdown-item>
               </el-dropdown-menu>

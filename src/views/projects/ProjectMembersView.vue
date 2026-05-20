@@ -4,36 +4,36 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
 import { fetchProjectMembers } from '@/services/projects'
+import { fetchRoleList } from '@/services/roles'
 import { parseBackendErrorMessage } from '@/utils/http-error'
+import { groupMembersByRole, memberDisplayName } from '@/utils/project-members'
 import type { ProjectMember } from '@/types/project'
+import type { RoleListItem } from '@/types/rbac'
 
 const route = useRoute()
 
 const loading = ref(false)
 const members = ref<ProjectMember[]>([])
-const total = ref(0)
-const query = ref({ current: 1, size: 10 })
+const roleCatalog = ref<RoleListItem[]>([])
 
 const projectId = computed(() => {
   const id = Number(route.params.projectId)
   return Number.isNaN(id) ? null : id
 })
 
-function roleNames(row: ProjectMember) {
-  return row.roles?.map((r) => r.roleName).filter(Boolean).join('、') || '—'
-}
+const memberGroups = computed(() => groupMembersByRole(members.value, roleCatalog.value))
 
 async function loadMembers() {
   const id = projectId.value
   if (id == null) return
   loading.value = true
   try {
-    const page = await fetchProjectMembers(id, {
-      current: query.value.current,
-      size: query.value.size,
-    })
-    members.value = page.records ?? []
-    total.value = page.total ?? 0
+    const [memberPage, rolePage] = await Promise.all([
+      fetchProjectMembers(id, { current: 1, size: 500 }),
+      fetchRoleList({ current: 1, size: 500 }),
+    ])
+    members.value = memberPage.records ?? []
+    roleCatalog.value = rolePage.records ?? []
   } catch (e) {
     ElMessage.error(parseBackendErrorMessage(e, '加载成员失败'))
   } finally {
@@ -44,7 +44,6 @@ async function loadMembers() {
 watch(
   () => route.params.projectId,
   () => {
-    query.value.current = 1
     void loadMembers()
   },
   { immediate: true },
@@ -59,27 +58,32 @@ watch(
       </div>
     </template>
 
-    <el-table v-loading="loading" :data="members" stripe style="width: 100%">
-      <el-table-column prop="login" label="登录名" width="140" />
-      <el-table-column label="姓名" min-width="120">
-        <template #default="{ row }">
-          {{ [row.firstname, row.lastname].filter(Boolean).join(' ') || '—' }}
-        </template>
-      </el-table-column>
-      <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
-      <el-table-column label="角色" min-width="160" show-overflow-tooltip>
-        <template #default="{ row }">{{ roleNames(row) }}</template>
-      </el-table-column>
-    </el-table>
-    <div class="members-pagination">
-      <el-pagination
-        v-model:current-page="query.current"
-        v-model:page-size="query.size"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
-        @current-change="loadMembers"
-        @size-change="() => { query.current = 1; loadMembers() }"
+    <div v-loading="loading" class="members-panel">
+      <template v-if="memberGroups.roleGroups.length > 0">
+        <div v-for="group in memberGroups.roleGroups" :key="group.roleName" class="members-role-row">
+          <span class="members-role-row__label">{{ group.roleName }}:</span>
+          <span class="members-role-row__names">
+            <template v-for="(m, index) in group.members" :key="`${group.roleName}-${m.userId}`">
+              <span v-if="index > 0" class="members-role-row__sep">, </span>
+              <span class="members-role-row__name">{{ memberDisplayName(m) }}</span>
+            </template>
+          </span>
+        </div>
+      </template>
+
+      <div v-if="memberGroups.unassigned.length > 0" class="members-role-row">
+        <span class="members-role-row__label">未分配角色:</span>
+        <span class="members-role-row__names">
+          <template v-for="(m, index) in memberGroups.unassigned" :key="m.userId">
+            <span v-if="index > 0" class="members-role-row__sep">, </span>
+            <span class="members-role-row__name members-role-row__name--muted">{{ memberDisplayName(m) }}</span>
+          </template>
+        </span>
+      </div>
+
+      <el-empty
+        v-if="!loading && memberGroups.roleGroups.length === 0 && memberGroups.unassigned.length === 0"
+        description="暂无项目成员"
       />
     </div>
   </el-card>
@@ -92,9 +96,45 @@ watch(
   justify-content: space-between;
 }
 
-.members-pagination {
-  margin-top: 16px;
+.members-panel {
+  min-height: 80px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.members-role-row {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin-bottom: 10px;
+}
+
+.members-role-row:last-child {
+  margin-bottom: 0;
+}
+
+.members-role-row__label {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.members-role-row__names {
+  flex: 1;
+  min-width: 0;
+}
+
+.members-role-row__name {
+  color: var(--el-color-primary);
+  cursor: default;
+}
+
+.members-role-row__name--muted {
+  color: var(--el-text-color-regular);
+}
+
+.members-role-row__sep {
+  color: var(--el-text-color-regular);
 }
 </style>

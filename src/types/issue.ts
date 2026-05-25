@@ -3,6 +3,8 @@ export interface IssueListQuery {
   size?: number
   projectId?: number
   statusId?: number
+  /** true=仅已关闭状态，false=仅打开状态；与 statusId 互斥时以 statusId 为准 */
+  statusIsClosed?: boolean
   trackerId?: number
   priorityId?: number
   assignedToId?: number

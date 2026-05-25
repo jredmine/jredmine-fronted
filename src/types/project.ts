@@ -85,3 +85,50 @@ export interface ProjectListQuery {
   isPublic?: boolean
   parentId?: number
 }
+
+/** 对齐 ProjectStatisticsResponseDTO */
+export interface ProjectStatistics {
+  projectId: number
+  projectName: string | null
+  projectStatus: number | null
+  memberCount: number | null
+  childrenCount: number | null
+  enabledModuleCount: number | null
+  trackerCount: number | null
+  versionCount: number | null
+  issueStatistics: ProjectIssueStatistics | null
+  timeEntryStatistics: ProjectTimeEntryStatistics | null
+  lastUpdatedOn: string | null
+}
+
+export interface ProjectIssueStatistics {
+  totalCount: number | null
+  pendingCount: number | null
+  inProgressCount: number | null
+  completedCount: number | null
+  completionRate: number | null
+  byStatus: ProjectStatusCountItem[] | null
+  byTracker: ProjectTrackerCountItem[] | null
+}
+
+export interface ProjectStatusCountItem {
+  statusId: number
+  statusName: string | null
+  count: number
+  isClosed: boolean | null
+}
+
+export interface ProjectTrackerCountItem {
+  trackerId: number
+  trackerName: string | null
+  count: number
+  openCount: number | null
+  closedCount: number | null
+}
+
+export interface ProjectTimeEntryStatistics {
+  totalHours: number | null
+  monthlyHours: number | null
+  weeklyHours: number | null
+  entryCount: number | null
+}

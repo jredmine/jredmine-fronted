@@ -5,6 +5,7 @@ import type {
   ProjectListItem,
   ProjectListQuery,
   ProjectMember,
+  ProjectStatistics,
   ProjectTreeNode,
   ProjectUpdatePayload,
 } from '@/types/project'
@@ -26,6 +27,11 @@ export async function fetchProjectTree(rootId?: number): Promise<ProjectTreeNode
 export async function fetchProjectDetail(id: number): Promise<ProjectDetail> {
   const { data } = await http.get<ApiResponse<ProjectDetail>>(`/api/projects/${id}`)
   return unwrapApiBody(data, '加载项目详情失败')
+}
+
+export async function fetchProjectStatistics(id: number): Promise<ProjectStatistics> {
+  const { data } = await http.get<ApiResponse<ProjectStatistics>>(`/api/projects/${id}/statistics`)
+  return unwrapApiBody(data, '加载项目统计失败')
 }
 
 export async function createProject(payload: ProjectCreatePayload): Promise<ProjectDetail> {

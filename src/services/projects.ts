@@ -1,4 +1,5 @@
 import type { ApiResponse, PageResponse } from '@/types/api-response'
+import type { IssueCategoryItem } from '@/types/issue-filter'
 import type {
   ProjectCreatePayload,
   ProjectDetail,
@@ -47,6 +48,17 @@ export async function updateProject(id: number, payload: ProjectUpdatePayload): 
 export async function deleteProject(id: number): Promise<void> {
   const { data } = await http.delete<ApiResponse<unknown>>(`/api/projects/${id}`)
   unwrapApiOk(data, '删除项目失败')
+}
+
+export async function fetchIssueCategories(
+  projectId: number,
+  params?: { current?: number; size?: number; name?: string },
+): Promise<PageResponse<IssueCategoryItem>> {
+  const { data } = await http.get<ApiResponse<PageResponse<IssueCategoryItem>>>(
+    `/api/projects/${projectId}/issue-categories`,
+    { params: { current: 1, size: 200, ...params } },
+  )
+  return unwrapApiBody(data, '加载问题类别失败')
 }
 
 export async function fetchProjectMembers(

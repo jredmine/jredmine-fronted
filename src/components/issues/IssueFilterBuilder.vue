@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import { Check, Refresh } from '@element-plus/icons-vue'
 
 import { fetchIssuePriorities } from '@/services/issues'
-import { fetchProjectMembers } from '@/services/projects'
+import { fetchIssueCategories, fetchProjectMembers } from '@/services/projects'
 import { fetchTrackerList } from '@/services/trackers'
 import { fetchIssueStatusList } from '@/services/workflows'
 import { memberDisplayName } from '@/utils/project-members'
@@ -12,13 +12,20 @@ import { parseBackendErrorMessage } from '@/utils/http-error'
 import {
   ISSUE_FILTER_DEFINITIONS,
   createFilterRow,
+  isDateRangeKey,
+  isDateRangeValue,
+  operatorLabel,
   type IssueFilterKey,
 } from '@/utils/issue-filters'
 import type {
-  AssigneeFilterOption,
+  AuthorFilterValue,
+  CategoryFilterValue,
+  DateRangeValue,
+  IssueCategoryItem,
   IssueFilterRow,
   IssuePriorityItem,
   StatusFilterValue,
+  UserRefFilterValue,
 } from '@/types/issue-filter'
 import type { IssueStatusItem } from '@/types/workflow'
 import type { ProjectMember } from '@/types/project'
@@ -42,6 +49,7 @@ const allStatuses = ref<IssueStatusItem[]>([])
 const allTrackers = ref<TrackerListItem[]>([])
 const allPriorities = ref<IssuePriorityItem[]>([])
 const projectMembers = ref<ProjectMember[]>([])
+const categories = ref<IssueCategoryItem[]>([])
 
 const rows = computed({
   get: () => props.modelValue,
@@ -51,7 +59,11 @@ const rows = computed({
 const usedKeys = computed(() => new Set(rows.value.map((r) => r.key)))
 
 const addableFilters = computed(() =>
-  ISSUE_FILTER_DEFINITIONS.filter((d) => !usedKeys.value.has(d.key)),
+  ISSUE_FILTER_DEFINITIONS.filter((d) => {
+    if (usedKeys.value.has(d.key)) return false
+    if (d.projectOnly && props.projectId == null) return false
+    return true
+  }),
 )
 
 const trackerOptions = computed(() => {
@@ -63,18 +75,25 @@ const trackerOptions = computed(() => {
   return allTrackers.value
 })
 
-const assigneeOptions = computed((): AssigneeFilterOption[] => {
-  const base: AssigneeFilterOption[] = [
-    { value: 'me', label: '<< 我 >>' },
-    { value: 'unassigned', label: '未分配' },
+const memberUserOptions = computed(() =>
+  projectMembers.value.map((m) => ({
+    value: m.userId as number,
+    label: memberDisplayName(m),
+  })),
+)
+
+const assigneeOptions = computed(() => {
+  const base = [
+    { value: 'me' as const, label: '<< 我 >>' },
+    { value: 'unassigned' as const, label: '未分配' },
   ]
-  if (props.projectId != null) {
-    const memberOpts = projectMembers.value.map((m) => ({
-      value: m.userId as number,
-      label: memberDisplayName(m),
-    }))
-    return [...base, ...memberOpts]
-  }
+  if (props.projectId != null) return [...base, ...memberUserOptions.value]
+  return base
+})
+
+const authorOptions = computed(() => {
+  const base = [{ value: 'me' as const, label: '<< 我 >>' }]
+  if (props.projectId != null) return [...base, ...memberUserOptions.value]
   return base
 })
 
@@ -115,8 +134,35 @@ function onPriorityChange(id: string, value: number | undefined) {
   updateRow(id, { value: value ?? '' })
 }
 
-function onAssignedToChange(id: string, value: IssueFilterRow['value'] | undefined) {
+function onAssignedToChange(id: string, value: UserRefFilterValue | undefined) {
   updateRow(id, { value: value ?? '' })
+}
+
+function onAuthorChange(id: string, value: AuthorFilterValue | undefined) {
+  updateRow(id, { value: value ?? '' })
+}
+
+function onCategoryChange(id: string, value: CategoryFilterValue | undefined) {
+  updateRow(id, { value: value ?? '' })
+}
+
+function dateRangeOf(row: IssueFilterRow): DateRangeValue {
+  if (isDateRangeValue(row.value)) return row.value
+  return { from: '', to: '' }
+}
+
+function onDateFromChange(id: string, key: IssueFilterKey, from: string | undefined) {
+  const row = rows.value.find((r) => r.id === id)
+  if (!row) return
+  const cur = dateRangeOf(row)
+  updateRow(id, { value: { ...cur, from: from || undefined } })
+}
+
+function onDateToChange(id: string, key: IssueFilterKey, to: string | undefined) {
+  const row = rows.value.find((r) => r.id === id)
+  if (!row) return
+  const cur = dateRangeOf(row)
+  updateRow(id, { value: { ...cur, to: to || undefined } })
 }
 
 function trackerModelValue(row: IssueFilterRow) {
@@ -128,6 +174,14 @@ function priorityModelValue(row: IssueFilterRow) {
 }
 
 function assignedToModelValue(row: IssueFilterRow) {
+  return row.value === '' ? undefined : row.value
+}
+
+function authorModelValue(row: IssueFilterRow) {
+  return row.value === '' ? undefined : row.value
+}
+
+function categoryModelValue(row: IssueFilterRow) {
   return row.value === '' ? undefined : row.value
 }
 
@@ -154,9 +208,13 @@ async function loadOptions() {
         fetchProjectMembers(props.projectId, { current: 1, size: 500 }).then((p) => {
           projectMembers.value = p.records ?? []
         }),
+        fetchIssueCategories(props.projectId).then((p) => {
+          categories.value = p.records ?? []
+        }),
       )
     } else {
       projectMembers.value = []
+      categories.value = []
     }
     await Promise.all(tasks)
   } catch (e) {
@@ -193,7 +251,7 @@ watch(trackerOptions, () => {
           @update:model-value="onRowEnabledChange(row.id, $event)"
         />
         <span class="issue-filter-builder__label">{{ labelForKey(row.key) }}</span>
-        <span class="issue-filter-builder__op">等于</span>
+        <span class="issue-filter-builder__op">{{ operatorLabel(row.key) }}</span>
 
         <el-select
           v-if="row.key === 'status'"
@@ -260,6 +318,56 @@ watch(trackerOptions, () => {
           />
         </el-select>
 
+        <el-select
+          v-else-if="row.key === 'author'"
+          :model-value="authorModelValue(row)"
+          clearable
+          class="issue-filter-builder__value"
+          placeholder="选择作者"
+          @update:model-value="onAuthorChange(row.id, $event)"
+        >
+          <el-option
+            v-for="opt in authorOptions"
+            :key="String(opt.value)"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+
+        <el-select
+          v-else-if="row.key === 'category'"
+          :model-value="categoryModelValue(row)"
+          clearable
+          class="issue-filter-builder__value"
+          placeholder="选择类别"
+          @update:model-value="onCategoryChange(row.id, $event)"
+        >
+          <el-option label="无类别" value="none" />
+          <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+        </el-select>
+
+        <template v-else-if="isDateRangeKey(row.key)">
+          <el-date-picker
+            :model-value="dateRangeOf(row).from"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="起"
+            class="issue-filter-builder__date"
+            clearable
+            @update:model-value="onDateFromChange(row.id, row.key, $event)"
+          />
+          <span class="issue-filter-builder__date-sep">—</span>
+          <el-date-picker
+            :model-value="dateRangeOf(row).to"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="止"
+            class="issue-filter-builder__date"
+            clearable
+            @update:model-value="onDateToChange(row.id, row.key, $event)"
+          />
+        </template>
+
         <el-button link type="danger" class="issue-filter-builder__remove" @click="removeRow(row.id)">
           删除
         </el-button>
@@ -292,7 +400,7 @@ watch(trackerOptions, () => {
 
 <style scoped>
 .issue-filter-builder {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   padding: 12px 14px;
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
@@ -325,6 +433,15 @@ watch(trackerOptions, () => {
 
 .issue-filter-builder__value {
   width: 200px;
+}
+
+.issue-filter-builder__date {
+  width: 150px;
+}
+
+.issue-filter-builder__date-sep {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
 }
 
 .issue-filter-builder__remove {

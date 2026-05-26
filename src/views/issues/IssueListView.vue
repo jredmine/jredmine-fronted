@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 
 import IssueFilterBuilder from '@/components/issues/IssueFilterBuilder.vue'
+import IssueSavedQueryBar from '@/components/issues/IssueSavedQueryBar.vue'
 import IssueFormDialog from '@/views/issues/IssueFormDialog.vue'
 import { fetchIssueList } from '@/services/issues'
 import { fetchProjectDetail } from '@/services/projects'
@@ -128,6 +129,21 @@ function clearFilters() {
   applyFilters()
 }
 
+function onLoadSavedQuery(payload: {
+  filters: string
+  keyword: string
+  sortBy: string
+  sortOrder: 'asc' | 'desc'
+}) {
+  const parsed = parseFiltersFromQuery(payload.filters)
+  filterRows.value =
+    parsed.length > 0 ? parsed : payload.filters ? [] : defaultFilterRows()
+  query.value.keyword = payload.keyword
+  query.value.sortBy = payload.sortBy
+  query.value.sortOrder = payload.sortOrder
+  applyFilters()
+}
+
 function onCreateSuccess() {
   query.value.current = 1
   void loadList()
@@ -169,6 +185,15 @@ watch(
     <p v-if="isGlobalList" class="list-scope-hint">
       列出您在相关项目中可见的全部问题（后端按权限过滤）；新建时可自由选择目标项目。
     </p>
+
+    <IssueSavedQueryBar
+      :project-id="routeProjectId"
+      :filter-rows="filterRows"
+      :keyword="query.keyword"
+      :sort-by="query.sortBy"
+      :sort-order="query.sortOrder"
+      @load="onLoadSavedQuery"
+    />
 
     <IssueFilterBuilder
       v-model="filterRows"

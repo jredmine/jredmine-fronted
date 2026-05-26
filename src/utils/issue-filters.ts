@@ -1,23 +1,44 @@
 import type { IssueListQuery } from '@/types/issue'
 import type {
-  AssignedToFilterValue,
+  AuthorFilterValue,
+  CategoryFilterValue,
+  DateRangeValue,
+  IssueFilterDefinition,
   IssueFilterKey,
   IssueFilterRow,
   IssueFilterValue,
   StatusFilterValue,
+  UserRefFilterValue,
 } from '@/types/issue-filter'
 
 const FILTER_SEP = '|'
 const FILTER_VAL_SEP = '~'
+const DATE_RANGE_SEP = '/'
 
-export const ISSUE_FILTER_DEFINITIONS: { key: IssueFilterKey; label: string }[] = [
+export const ISSUE_FILTER_DEFINITIONS: IssueFilterDefinition[] = [
   { key: 'status', label: '状态' },
   { key: 'tracker', label: '跟踪' },
   { key: 'priority', label: '优先级' },
   { key: 'assignedTo', label: '指派给' },
+  { key: 'author', label: '作者' },
+  { key: 'category', label: '类别', projectOnly: true },
+  { key: 'createdOn', label: '创建于' },
+  { key: 'updatedOn', label: '更新于' },
 ]
 
 let rowIdSeq = 0
+
+export function isDateRangeKey(key: IssueFilterKey): boolean {
+  return key === 'createdOn' || key === 'updatedOn'
+}
+
+export function isDateRangeValue(value: IssueFilterValue): value is DateRangeValue {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && ('from' in value || 'to' in value)
+}
+
+export function isEmptyDateRange(value: DateRangeValue): boolean {
+  return !value.from && !value.to
+}
 
 export function createFilterRow(key: IssueFilterKey, value?: IssueFilterValue): IssueFilterRow {
   return {
@@ -34,6 +55,9 @@ function defaultValueForKey(key: IssueFilterKey): IssueFilterValue {
       return 'open'
     case 'assignedTo':
       return 'me'
+    case 'createdOn':
+    case 'updatedOn':
+      return { from: '', to: '' }
     default:
       return ''
   }
@@ -43,11 +67,22 @@ export function defaultFilterRows(): IssueFilterRow[] {
   return [createFilterRow('status', 'open')]
 }
 
-function encodeValue(value: IssueFilterValue): string {
+function encodeValue(key: IssueFilterKey, value: IssueFilterValue): string {
+  if (isDateRangeKey(key) && isDateRangeValue(value)) {
+    return `${value.from ?? ''}${DATE_RANGE_SEP}${value.to ?? ''}`
+  }
   return String(value)
 }
 
+function decodeDateRange(raw: string): DateRangeValue {
+  const [from = '', to = ''] = raw.split(DATE_RANGE_SEP)
+  return { from: from || undefined, to: to || undefined }
+}
+
 function decodeValue(key: IssueFilterKey, raw: string): IssueFilterValue {
+  if (isDateRangeKey(key)) {
+    return decodeDateRange(raw)
+  }
   if (key === 'status') {
     if (raw === 'open' || raw === 'closed') return raw
     const n = Number(raw)
@@ -58,14 +93,32 @@ function decodeValue(key: IssueFilterKey, raw: string): IssueFilterValue {
     const n = Number(raw)
     return Number.isNaN(n) ? '' : n
   }
+  if (key === 'author') {
+    if (raw === 'me') return raw
+    const n = Number(raw)
+    return Number.isNaN(n) ? '' : n
+  }
+  if (key === 'category') {
+    if (raw === 'none') return 'none'
+    const n = Number(raw)
+    return Number.isNaN(n) ? '' : n
+  }
   const n = Number(raw)
   return Number.isNaN(n) ? '' : n
 }
 
+function rowHasValue(row: IssueFilterRow): boolean {
+  if (!row.enabled) return false
+  if (isDateRangeKey(row.key) && isDateRangeValue(row.value)) {
+    return !isEmptyDateRange(row.value)
+  }
+  return row.value !== '' && row.value != null
+}
+
 export function serializeFiltersToQuery(rows: IssueFilterRow[]): string {
   return rows
-    .filter((r) => r.enabled && r.value !== '' && r.value != null)
-    .map((r) => `${r.key}${FILTER_VAL_SEP}${encodeValue(r.value)}`)
+    .filter(rowHasValue)
+    .map((r) => `${r.key}${FILTER_VAL_SEP}${encodeValue(r.key, r.value)}`)
     .join(FILTER_SEP)
 }
 
@@ -92,15 +145,35 @@ export function filtersToListQuery(
   currentUserId?: number | null,
 ): Pick<
   IssueListQuery,
-  'statusId' | 'statusIsClosed' | 'trackerId' | 'priorityId' | 'assignedToId'
+  | 'statusId'
+  | 'statusIsClosed'
+  | 'trackerId'
+  | 'priorityId'
+  | 'assignedToId'
+  | 'authorId'
+  | 'categoryId'
+  | 'createdOnFrom'
+  | 'createdOnTo'
+  | 'updatedOnFrom'
+  | 'updatedOnTo'
 > {
   const params: Pick<
     IssueListQuery,
-    'statusId' | 'statusIsClosed' | 'trackerId' | 'priorityId' | 'assignedToId'
+    | 'statusId'
+    | 'statusIsClosed'
+    | 'trackerId'
+    | 'priorityId'
+    | 'assignedToId'
+    | 'authorId'
+    | 'categoryId'
+    | 'createdOnFrom'
+    | 'createdOnTo'
+    | 'updatedOnFrom'
+    | 'updatedOnTo'
   > = {}
 
   for (const row of rows) {
-    if (!row.enabled || row.value === '' || row.value == null) continue
+    if (!rowHasValue(row)) continue
 
     switch (row.key) {
       case 'status': {
@@ -117,14 +190,42 @@ export function filtersToListQuery(
         if (typeof row.value === 'number') params.priorityId = row.value
         break
       case 'assignedTo': {
-        const v = row.value as AssignedToFilterValue
+        const v = row.value as UserRefFilterValue
         if (v === 'unassigned') params.assignedToId = 0
         else if (v === 'me' && currentUserId) params.assignedToId = currentUserId
         else if (typeof v === 'number') params.assignedToId = v
+        break
+      }
+      case 'author': {
+        const v = row.value as AuthorFilterValue
+        if (v === 'me' && currentUserId) params.authorId = currentUserId
+        else if (typeof v === 'number') params.authorId = v
+        break
+      }
+      case 'category': {
+        const v = row.value as CategoryFilterValue
+        if (v === 'none') params.categoryId = 0
+        else if (typeof v === 'number') params.categoryId = v
+        break
+      }
+      case 'createdOn': {
+        const v = row.value as DateRangeValue
+        if (v.from) params.createdOnFrom = v.from
+        if (v.to) params.createdOnTo = v.to
+        break
+      }
+      case 'updatedOn': {
+        const v = row.value as DateRangeValue
+        if (v.from) params.updatedOnFrom = v.from
+        if (v.to) params.updatedOnTo = v.to
         break
       }
     }
   }
 
   return params
+}
+
+export function operatorLabel(key: IssueFilterKey): string {
+  return isDateRangeKey(key) ? '介于' : '等于'
 }

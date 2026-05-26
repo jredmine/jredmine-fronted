@@ -12,6 +12,10 @@ export interface IssueListQuery {
   categoryId?: number
   fixedVersionId?: number
   keyword?: string
+  createdOnFrom?: string
+  createdOnTo?: string
+  updatedOnFrom?: string
+  updatedOnTo?: string
   isPrivate?: boolean
   sortBy?: string
   sortOrder?: 'asc' | 'desc'

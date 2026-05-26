@@ -4,33 +4,32 @@ import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 
+import IssueFilterBuilder from '@/components/issues/IssueFilterBuilder.vue'
 import IssueFormDialog from '@/views/issues/IssueFormDialog.vue'
 import { fetchIssueList } from '@/services/issues'
 import { fetchProjectDetail } from '@/services/projects'
-import { fetchTrackerList } from '@/services/trackers'
-import { fetchIssueStatusList } from '@/services/workflows'
+import { useAuthStore } from '@/stores/auth'
 import { useProjectContextStore } from '@/stores/project-context'
 import { parseBackendErrorMessage } from '@/utils/http-error'
+import {
+  defaultFilterRows,
+  filtersToListQuery,
+  parseFiltersFromQuery,
+  serializeFiltersToQuery,
+} from '@/utils/issue-filters'
+import type { IssueFilterRow } from '@/types/issue-filter'
 import type { IssueListItem, IssueListQuery } from '@/types/issue'
-import type { IssueStatusItem } from '@/types/workflow'
-import type { TrackerListItem } from '@/types/tracker'
-
-/** 状态筛选：全部 / 打开 / 已关闭 / 具体状态 ID */
-type StatusFilterValue = '' | 'open' | 'closed' | number
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const ctx = useProjectContextStore()
 const { currentProject } = storeToRefs(ctx)
 
 const loading = ref(false)
 const records = ref<IssueListItem[]>([])
 const total = ref(0)
-
-const statusesLoading = ref(false)
-const trackersLoading = ref(false)
-const allStatuses = ref<IssueStatusItem[]>([])
-const allTrackers = ref<TrackerListItem[]>([])
+const filterRows = ref<IssueFilterRow[]>([])
 
 const query = ref({
   current: 1,
@@ -38,12 +37,8 @@ const query = ref({
   keyword: '',
   sortBy: 'updated_on',
   sortOrder: 'desc' as 'asc' | 'desc',
-  /** 默认展示的状态、跟踪筛选（空表示不限） */
-  statusFilter: '' as StatusFilterValue,
-  trackerId: undefined as number | undefined,
 })
 
-/** 路由中的项目 ID（项目内列表）；全局列表无此项 */
 const routeProjectId = computed(() => {
   const id = Number(route.params.projectId)
   return Number.isNaN(id) ? null : id
@@ -51,14 +46,7 @@ const routeProjectId = computed(() => {
 
 const isGlobalList = computed(() => route.name === 'IssueGlobalList')
 
-const trackerOptions = computed(() => {
-  const ids = currentProject.value?.trackerIds
-  if (routeProjectId.value != null && ids && ids.length > 0) {
-    const allowed = new Set(ids)
-    return allTrackers.value.filter((t) => allowed.has(t.id))
-  }
-  return allTrackers.value
-})
+const projectTrackerIds = computed(() => currentProject.value?.trackerIds ?? null)
 
 const createVisible = ref(false)
 
@@ -77,44 +65,28 @@ function goDetail(row: IssueListItem) {
 
 function buildListParams(): IssueListQuery {
   const scopedPid = routeProjectId.value
-  const params: IssueListQuery = {
+  return {
     ...(scopedPid != null ? { projectId: scopedPid } : {}),
     current: query.value.current,
     size: query.value.size,
     keyword: query.value.keyword || undefined,
     sortBy: query.value.sortBy || undefined,
     sortOrder: query.value.sortOrder || undefined,
-    trackerId: query.value.trackerId,
+    ...filtersToListQuery(filterRows.value, auth.user?.id),
   }
-
-  const sf = query.value.statusFilter
-  if (typeof sf === 'number') {
-    params.statusId = sf
-  } else if (sf === 'open') {
-    params.statusIsClosed = false
-  } else if (sf === 'closed') {
-    params.statusIsClosed = true
-  }
-
-  return params
 }
 
-async function loadFilterOptions() {
-  statusesLoading.value = true
-  trackersLoading.value = true
-  try {
-    const [statuses, trackerPage] = await Promise.all([
-      fetchIssueStatusList(),
-      fetchTrackerList({ current: 1, size: 200 }),
-    ])
-    allStatuses.value = statuses
-    allTrackers.value = trackerPage.records ?? []
-  } catch (e) {
-    ElMessage.error(parseBackendErrorMessage(e, '加载筛选选项失败'))
-  } finally {
-    statusesLoading.value = false
-    trackersLoading.value = false
-  }
+function syncFiltersToRoute() {
+  const filters = serializeFiltersToQuery(filterRows.value)
+  const nextQuery = { ...route.query } as Record<string, string | string[]>
+  if (filters) nextQuery.filters = filters
+  else delete nextQuery.filters
+  void router.replace({ query: nextQuery })
+}
+
+function initFiltersFromRoute() {
+  const parsed = parseFiltersFromQuery(route.query.filters)
+  filterRows.value = parsed.length > 0 ? parsed : defaultFilterRows()
 }
 
 async function loadProjectContext() {
@@ -146,12 +118,12 @@ async function loadList() {
 
 function applyFilters() {
   query.value.current = 1
+  syncFiltersToRoute()
   void loadList()
 }
 
 function clearFilters() {
-  query.value.statusFilter = ''
-  query.value.trackerId = undefined
+  filterRows.value = defaultFilterRows()
   query.value.keyword = ''
   applyFilters()
 }
@@ -165,8 +137,7 @@ watch(
   () => [route.name, route.params.projectId] as const,
   () => {
     query.value.current = 1
-    query.value.statusFilter = ''
-    query.value.trackerId = undefined
+    initFiltersFromRoute()
     void loadProjectContext()
     void loadList()
   },
@@ -174,16 +145,14 @@ watch(
 )
 
 watch(
-  () => routeProjectId.value,
+  () => route.query.filters,
   () => {
-    const allowed = new Set(trackerOptions.value.map((t) => t.id))
-    if (query.value.trackerId != null && !allowed.has(query.value.trackerId)) {
-      query.value.trackerId = undefined
+    const parsed = parseFiltersFromQuery(route.query.filters)
+    if (parsed.length > 0) {
+      filterRows.value = parsed
     }
   },
 )
-
-void loadFilterOptions()
 </script>
 
 <template>
@@ -201,59 +170,13 @@ void loadFilterOptions()
       列出您在相关项目中可见的全部问题（后端按权限过滤）；新建时可自由选择目标项目。
     </p>
 
-    <section class="list-filters" aria-label="过滤器">
-      <div class="list-filters__row">
-        <label class="list-filters__label">状态</label>
-        <el-select
-          v-model="query.statusFilter"
-          clearable
-          placeholder="全部"
-          class="list-filters__control"
-          :loading="statusesLoading"
-          @change="applyFilters"
-        >
-          <el-option label="打开" value="open" />
-          <el-option label="已关闭" value="closed" />
-          <el-option-group v-if="allStatuses.some((s) => !s.isClosed)" label="具体状态">
-            <el-option
-              v-for="s in allStatuses.filter((x) => !x.isClosed)"
-              :key="s.id"
-              :label="s.name"
-              :value="s.id"
-            />
-          </el-option-group>
-          <el-option-group v-if="allStatuses.some((s) => s.isClosed)" label="已关闭状态">
-            <el-option
-              v-for="s in allStatuses.filter((x) => x.isClosed)"
-              :key="s.id"
-              :label="s.name"
-              :value="s.id"
-            />
-          </el-option-group>
-        </el-select>
-      </div>
-      <div class="list-filters__row">
-        <label class="list-filters__label">跟踪</label>
-        <el-select
-          v-model="query.trackerId"
-          clearable
-          placeholder="全部"
-          class="list-filters__control"
-          :loading="trackersLoading"
-          @change="applyFilters"
-        >
-          <el-option
-            v-for="t in trackerOptions"
-            :key="t.id"
-            :label="t.name"
-            :value="t.id"
-          />
-        </el-select>
-      </div>
-      <div class="list-filters__actions">
-        <el-button link type="primary" @click="clearFilters">清除</el-button>
-      </div>
-    </section>
+    <IssueFilterBuilder
+      v-model="filterRows"
+      :project-id="routeProjectId"
+      :project-tracker-ids="projectTrackerIds"
+      @apply="applyFilters"
+      @clear="clearFilters"
+    />
 
     <div class="list-toolbar">
       <el-input
@@ -331,39 +254,6 @@ void loadFilterOptions()
   font-size: 13px;
   color: var(--el-text-color-secondary);
   line-height: 1.5;
-}
-
-.list-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px 20px;
-  margin-bottom: 16px;
-  padding: 12px 14px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--jr-radius-lg, 8px);
-}
-
-.list-filters__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.list-filters__label {
-  flex-shrink: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.list-filters__control {
-  width: 200px;
-}
-
-.list-filters__actions {
-  margin-left: auto;
 }
 
 .list-toolbar {

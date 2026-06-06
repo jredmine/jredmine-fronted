@@ -93,3 +93,42 @@ export interface IssueCreatePayload {
   isPrivate?: boolean
 }
 
+export interface IssueUpdatePayload {
+  subject?: string
+  description?: string
+  trackerId?: number
+  statusId?: number
+  priorityId?: number
+  /** 0 表示取消分配 */
+  assignedToId?: number
+  /** 0 表示无分类 */
+  categoryId?: number
+  /** 0 表示无版本 */
+  fixedVersionId?: number
+  startDate?: string
+  dueDate?: string
+  estimatedHours?: number
+  doneRatio?: number
+  parentId?: number
+  isPrivate?: boolean
+}
+
+export interface IssueStatusUpdatePayload {
+  statusId: number
+  notes?: string
+}
+
+export interface IssueAssignPayload {
+  /** null 或 0 表示取消分配 */
+  assignedToId?: number | null
+}
+
+export interface IssueCopyPayload {
+  targetProjectId?: number
+  subject?: string
+  copyChildren?: boolean
+  copyRelations?: boolean
+  copyWatchers?: boolean
+  copyJournals?: boolean
+}
+

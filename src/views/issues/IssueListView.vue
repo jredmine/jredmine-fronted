@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 
 import IssueFilterBuilder from '@/components/issues/IssueFilterBuilder.vue'
+import IssueListContextMenu from '@/components/issues/IssueListContextMenu.vue'
 import IssueSavedQueryBar from '@/components/issues/IssueSavedQueryBar.vue'
 import IssueFormDialog from '@/views/issues/IssueFormDialog.vue'
 import { fetchIssueList } from '@/services/issues'
@@ -19,7 +20,7 @@ import {
   serializeFiltersToQuery,
 } from '@/utils/issue-filters'
 import type { IssueFilterRow } from '@/types/issue-filter'
-import type { IssueListItem, IssueListQuery } from '@/types/issue'
+import type { IssueDetail, IssueListItem, IssueListQuery } from '@/types/issue'
 
 const route = useRoute()
 const router = useRouter()
@@ -204,6 +205,35 @@ function onTableSortChange(payload: { prop: string; order: 'ascending' | 'descen
   void loadList()
 }
 
+function patchRowFromDetail(row: IssueListItem, detail: IssueDetail) {
+  row.trackerId = detail.trackerId
+  row.trackerName = detail.trackerName
+  row.statusId = detail.statusId
+  row.statusName = detail.statusName
+  row.priorityId = detail.priorityId
+  row.priorityName = detail.priorityName
+  row.assignedToId = detail.assignedToId
+  row.assignedToName = detail.assignedToName
+  row.doneRatio = detail.doneRatio
+  row.updatedOn = detail.updatedOn
+  row.dueDate = detail.dueDate
+}
+
+function onRowChange(detail: IssueDetail) {
+  const row = records.value.find((r) => r.id === detail.id)
+  if (row) patchRowFromDetail(row, detail)
+}
+
+function onRowDeleted(issueId: number) {
+  records.value = records.value.filter((r) => r.id !== issueId)
+  total.value = Math.max(0, total.value - 1)
+}
+
+function onRowCopied() {
+  query.value.current = 1
+  void loadList()
+}
+
 watch(
   () => [route.name, route.params.projectId] as const,
   () => {
@@ -379,6 +409,17 @@ watch(
         sortable="custom"
         :sort-orders="columnSortOrders"
       />
+      <el-table-column label="" width="52" fixed="right" align="center">
+        <template #default="{ row }">
+          <IssueListContextMenu
+            :row="row"
+            :route-project-id="routeProjectId"
+            @change="onRowChange"
+            @copied="onRowCopied"
+            @deleted="onRowDeleted"
+          />
+        </template>
+      </el-table-column>
     </el-table>
 
     <div class="list-pagination">

@@ -57,6 +57,7 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTree: typeof import('element-plus/es')['ElTree']
     IssueFilterBuilder: typeof import('./components/issues/IssueFilterBuilder.vue')['default']
+    IssueListContextMenu: typeof import('./components/issues/IssueListContextMenu.vue')['default']
     IssueSavedQueryBar: typeof import('./components/issues/IssueSavedQueryBar.vue')['default']
     ProjectContextBar: typeof import('./components/project/ProjectContextBar.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

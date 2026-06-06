@@ -296,7 +296,11 @@ watch(
         width="90"
         sortable="custom"
         :sort-orders="columnSortOrders"
-      />
+      >
+        <template #default="{ row }">
+          <el-button link type="primary" @click="goDetail(row)">{{ row.id }}</el-button>
+        </template>
+      </el-table-column>
       <el-table-column
         v-if="isGlobalList"
         prop="projectName"

@@ -51,6 +51,50 @@ const projectTrackerIds = computed(() => currentProject.value?.trackerIds ?? nul
 
 const createVisible = ref(false)
 
+interface IssueListSortOption {
+  value: string
+  label: string
+  column?: string
+  globalOnly?: boolean
+}
+
+/** 问题列表可排序字段（工具栏与列头共用） */
+const ISSUE_LIST_SORT_OPTIONS: IssueListSortOption[] = [
+  { value: 'id', label: '按编号', column: 'id' },
+  { value: 'project_id', label: '按项目', column: 'projectName', globalOnly: true },
+  { value: 'tracker_id', label: '按跟踪器', column: 'trackerName' },
+  { value: 'subject', label: '按标题', column: 'subject' },
+  { value: 'status_id', label: '按状态', column: 'statusName' },
+  { value: 'priority', label: '按优先级', column: 'priorityName' },
+  { value: 'assigned_to_id', label: '按指派给', column: 'assignedToName' },
+  { value: 'done_ratio', label: '按完成度', column: 'doneRatio' },
+  { value: 'created_on', label: '按创建时间' },
+  { value: 'updated_on', label: '按更新时间', column: 'updatedOn' },
+  { value: 'due_date', label: '按截止日期', column: 'dueDate' },
+]
+
+/** 表格列 prop → 后端 sortBy */
+const COLUMN_SORT_BY: Record<string, string> = Object.fromEntries(
+  ISSUE_LIST_SORT_OPTIONS.filter((o) => o.column).map((o) => [o.column!, o.value]),
+)
+
+const SORT_BY_COLUMN: Record<string, string> = Object.fromEntries(
+  ISSUE_LIST_SORT_OPTIONS.filter((o) => o.column).map((o) => [o.value, o.column!]),
+)
+
+const toolbarSortOptions = computed(() =>
+  ISSUE_LIST_SORT_OPTIONS.filter((o) => !o.globalOnly || isGlobalList.value),
+)
+
+const tableSortKey = computed(() => `${query.value.sortBy}:${query.value.sortOrder}`)
+
+const tableDefaultSort = computed(() => ({
+  prop: SORT_BY_COLUMN[query.value.sortBy] ?? 'updatedOn',
+  order: (query.value.sortOrder === 'asc' ? 'ascending' : 'descending') as 'ascending' | 'descending',
+}))
+
+const columnSortOrders: ('ascending' | 'descending')[] = ['ascending', 'descending']
+
 function openCreate() {
   createVisible.value = true
 }
@@ -149,6 +193,17 @@ function onCreateSuccess() {
   void loadList()
 }
 
+function onTableSortChange(payload: { prop: string; order: 'ascending' | 'descending' | null }) {
+  const { prop, order } = payload
+  if (!prop || !order) return
+  const sortBy = COLUMN_SORT_BY[prop]
+  if (!sortBy) return
+  query.value.sortBy = sortBy
+  query.value.sortOrder = order === 'ascending' ? 'asc' : 'desc'
+  query.value.current = 1
+  void loadList()
+}
+
 watch(
   () => [route.name, route.params.projectId] as const,
   () => {
@@ -212,10 +267,12 @@ watch(
         @keyup.enter="applyFilters"
       />
       <el-select v-model="query.sortBy" style="width: 160px">
-        <el-option label="按创建时间" value="created_on" />
-        <el-option label="按更新时间" value="updated_on" />
-        <el-option label="按优先级" value="priority" />
-        <el-option label="按截止日期" value="due_date" />
+        <el-option
+          v-for="opt in toolbarSortOptions"
+          :key="opt.value"
+          :label="opt.label"
+          :value="opt.value"
+        />
       </el-select>
       <el-select v-model="query.sortOrder" style="width: 120px">
         <el-option label="倒序" value="desc" />
@@ -224,25 +281,100 @@ watch(
       <el-button type="primary" @click="applyFilters">查询</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="records" stripe style="width: 100%">
-      <el-table-column prop="id" label="#" width="90" />
-      <el-table-column v-if="isGlobalList" prop="projectName" label="项目" min-width="140" show-overflow-tooltip />
-      <el-table-column prop="trackerName" label="跟踪器" width="120" show-overflow-tooltip />
-      <el-table-column prop="subject" label="标题" min-width="260" show-overflow-tooltip>
+    <el-table
+      :key="tableSortKey"
+      v-loading="loading"
+      :data="records"
+      stripe
+      style="width: 100%"
+      :default-sort="tableDefaultSort"
+      @sort-change="onTableSortChange"
+    >
+      <el-table-column
+        prop="id"
+        label="#"
+        width="90"
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      />
+      <el-table-column
+        v-if="isGlobalList"
+        prop="projectName"
+        label="项目"
+        min-width="140"
+        show-overflow-tooltip
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      />
+      <el-table-column
+        prop="trackerName"
+        label="跟踪器"
+        width="120"
+        show-overflow-tooltip
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      />
+      <el-table-column
+        prop="subject"
+        label="标题"
+        min-width="260"
+        show-overflow-tooltip
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      >
         <template #default="{ row }">
           <el-button link type="primary" @click="goDetail(row)">{{ row.subject }}</el-button>
         </template>
       </el-table-column>
-      <el-table-column prop="statusName" label="状态" width="120" show-overflow-tooltip />
-      <el-table-column prop="priorityName" label="优先级" width="120" show-overflow-tooltip />
-      <el-table-column prop="assignedToName" label="指派给" width="140" show-overflow-tooltip />
-      <el-table-column prop="doneRatio" label="完成度" width="100">
+      <el-table-column
+        prop="statusName"
+        label="状态"
+        width="120"
+        show-overflow-tooltip
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      />
+      <el-table-column
+        prop="priorityName"
+        label="优先级"
+        width="120"
+        show-overflow-tooltip
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      />
+      <el-table-column
+        prop="assignedToName"
+        label="指派给"
+        width="140"
+        show-overflow-tooltip
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      />
+      <el-table-column
+        prop="doneRatio"
+        label="完成度"
+        width="100"
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      >
         <template #default="{ row }">
           {{ row.doneRatio != null ? `${row.doneRatio}%` : '—' }}
         </template>
       </el-table-column>
-      <el-table-column prop="dueDate" label="截止" width="120" />
-      <el-table-column prop="updatedOn" label="更新" width="170" />
+      <el-table-column
+        prop="dueDate"
+        label="截止"
+        width="120"
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      />
+      <el-table-column
+        prop="updatedOn"
+        label="更新"
+        width="170"
+        sortable="custom"
+        :sort-orders="columnSortOrders"
+      />
     </el-table>
 
     <div class="list-pagination">

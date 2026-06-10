@@ -132,7 +132,7 @@ async function onDeleteQuery() {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .saved-query-bar__icon {

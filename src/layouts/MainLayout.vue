@@ -61,6 +61,8 @@ const showProjectChrome = computed(() => Boolean(route.params.projectId))
 /** 仅多级路径时显示面包屑，避免与侧栏重复「首页 / 一级模块名」 */
 const showBreadcrumb = computed(() => breadcrumbs.value.length > 1)
 
+const asideWidth = 200
+
 function gotoByName(name: string) {
   if (route.name !== name) {
     void router.push({ name })
@@ -144,7 +146,7 @@ async function submitChangePassword() {
 
 <template>
   <el-container class="main-layout">
-    <el-header class="main-layout__header" height="56px">
+    <el-header class="main-layout__header" height="48px">
       <div class="main-layout__brand">
         <span class="main-layout__logo-mark" aria-hidden="true" />
         <span class="main-layout__title">JRedmine</span>
@@ -158,7 +160,7 @@ async function submitChangePassword() {
     </el-header>
 
     <el-container class="main-layout__body">
-      <el-aside class="main-layout__aside" width="232px">
+      <el-aside class="main-layout__aside" :width="`${asideWidth}px`">
         <el-menu class="main-layout__menu" :default-active="activeMenu" @select="onMenuSelect">
           <el-menu-item v-for="item in menuItems" :key="item.key" :index="item.key">
             <el-icon><component :is="item.icon" /></el-icon>
@@ -274,7 +276,7 @@ async function submitChangePassword() {
 .main-layout__aside {
   border-right: 1px solid var(--el-border-color-lighter);
   background: #fff;
-  padding: 12px 8px 24px;
+  padding: 8px 6px 16px;
 }
 
 .main-layout__menu {
@@ -295,17 +297,16 @@ async function submitChangePassword() {
 
 .main-layout__main {
   width: 100%;
-  padding: 24px;
+  padding: 16px;
   background: var(--jr-page-bg);
 }
 
 .main-layout__content {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .main-layout__breadcrumb {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   font-size: 13px;
 }
 </style>

@@ -400,23 +400,19 @@ watch(trackerOptions, () => {
 
 <style scoped>
 .issue-filter-builder {
-  margin-bottom: 8px;
-  padding: 12px 14px;
+  margin-bottom: 6px;
+  padding: 10px 12px;
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--jr-radius-lg, 8px);
-}
-
-.issue-filter-builder__body {
-  min-height: 40px;
 }
 
 .issue-filter-builder__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
-  margin-bottom: 10px;
+  gap: 6px 8px;
+  margin-bottom: 6px;
 }
 
 .issue-filter-builder__label {
@@ -452,9 +448,9 @@ watch(trackerOptions, () => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin-top: 4px;
-  padding-top: 8px;
+  gap: 8px;
+  margin-top: 2px;
+  padding-top: 6px;
   border-top: 1px dashed var(--el-border-color-lighter);
 }
 
@@ -465,7 +461,6 @@ watch(trackerOptions, () => {
 .issue-filter-builder__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-left: auto;
+  gap: 6px;
 }
 </style>

@@ -311,12 +311,13 @@ watch(
       <el-button type="primary" @click="applyFilters">查询</el-button>
     </div>
 
+    <div class="issue-list-table-wrap">
     <el-table
       :key="tableSortKey"
       v-loading="loading"
+      class="jr-compact-table"
       :data="records"
       stripe
-      style="width: 100%"
       :default-sort="tableDefaultSort"
       @sort-change="onTableSortChange"
     >
@@ -351,7 +352,7 @@ watch(
       <el-table-column
         prop="subject"
         label="标题"
-        min-width="260"
+        width="320"
         show-overflow-tooltip
         sortable="custom"
         :sort-orders="columnSortOrders"
@@ -363,7 +364,7 @@ watch(
       <el-table-column
         prop="statusName"
         label="状态"
-        width="120"
+        width="96"
         show-overflow-tooltip
         sortable="custom"
         :sort-orders="columnSortOrders"
@@ -371,7 +372,7 @@ watch(
       <el-table-column
         prop="priorityName"
         label="优先级"
-        width="120"
+        width="96"
         show-overflow-tooltip
         sortable="custom"
         :sort-orders="columnSortOrders"
@@ -379,7 +380,7 @@ watch(
       <el-table-column
         prop="assignedToName"
         label="指派给"
-        width="140"
+        width="110"
         show-overflow-tooltip
         sortable="custom"
         :sort-orders="columnSortOrders"
@@ -387,7 +388,7 @@ watch(
       <el-table-column
         prop="doneRatio"
         label="完成度"
-        width="100"
+        width="80"
         sortable="custom"
         :sort-orders="columnSortOrders"
       >
@@ -405,7 +406,7 @@ watch(
       <el-table-column
         prop="updatedOn"
         label="更新"
-        width="170"
+        width="150"
         sortable="custom"
         :sort-orders="columnSortOrders"
       />
@@ -421,6 +422,7 @@ watch(
         </template>
       </el-table-column>
     </el-table>
+    </div>
 
     <div class="list-pagination">
       <el-pagination
@@ -452,21 +454,26 @@ watch(
 }
 
 .list-scope-hint {
-  margin: 0 0 16px;
+  margin: 0 0 10px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .list-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.issue-list-table-wrap {
+  overflow-x: auto;
 }
 
 .list-pagination {
-  margin-top: 16px;
+  margin-top: 12px;
   display: flex;
   justify-content: flex-end;
 }

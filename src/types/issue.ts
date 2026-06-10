@@ -94,6 +94,7 @@ export interface IssueCreatePayload {
 }
 
 export interface IssueUpdatePayload {
+  projectId?: number
   subject?: string
   description?: string
   trackerId?: number

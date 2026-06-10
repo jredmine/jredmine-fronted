@@ -82,3 +82,75 @@ body {
   font-size: 16px;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
+
+/* Markdown 渲染正文（Wiki、问题描述等共用） */
+.jr-markdown-body {
+  font-size: 14px;
+  line-height: 1.65;
+  word-break: break-word;
+  color: var(--el-text-color-primary);
+}
+
+.jr-markdown-body h1,
+.jr-markdown-body h2,
+.jr-markdown-body h3,
+.jr-markdown-body h4 {
+  margin: 1em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.jr-markdown-body h1 {
+  font-size: 1.35em;
+}
+
+.jr-markdown-body p {
+  margin: 0.6em 0;
+}
+
+.jr-markdown-body ul,
+.jr-markdown-body ol {
+  margin: 0.6em 0;
+  padding-left: 1.5em;
+}
+
+.jr-markdown-body blockquote {
+  margin: 0.6em 0;
+  padding: 0.25em 0 0.25em 1em;
+  border-left: 4px solid var(--el-border-color);
+  color: var(--el-text-color-secondary);
+}
+
+.jr-markdown-body pre {
+  margin: 0.75em 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--el-fill-color-light);
+}
+
+.jr-markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.jr-markdown-body :not(pre) > code {
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background: var(--el-fill-color-light);
+}
+
+.jr-markdown-body table {
+  border-collapse: collapse;
+  margin: 0.75em 0;
+}
+
+.jr-markdown-body th,
+.jr-markdown-body td {
+  border: 1px solid var(--el-border-color-lighter);
+  padding: 6px 10px;
+}
+
+.jr-markdown-body a {
+  color: var(--jr-brand);
+}

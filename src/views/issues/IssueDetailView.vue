@@ -3,11 +3,13 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
+import IssueFormDialog from '@/views/issues/IssueFormDialog.vue'
 import { fetchIssueDetail } from '@/services/issues'
 import { fetchProjectDetail } from '@/services/projects'
 import { useProjectContextStore } from '@/stores/project-context'
 import { formatDateTime, formatRelativeTimeZh } from '@/utils/datetime'
 import { parseBackendErrorMessage } from '@/utils/http-error'
+import { renderMarkdown } from '@/utils/wiki-content'
 import type { IssueDetail } from '@/types/issue'
 
 const route = useRoute()
@@ -16,6 +18,7 @@ const ctx = useProjectContextStore()
 
 const loading = ref(false)
 const detail = ref<IssueDetail | null>(null)
+const editVisible = ref(false)
 
 const projectId = computed(() => {
   const id = Number(route.params.projectId)
@@ -30,6 +33,34 @@ const issueId = computed(() => {
 const issueOpenLabel = computed(() => (detail.value?.closedOn ? '已关闭' : '打开'))
 
 const createdRelative = computed(() => formatRelativeTimeZh(detail.value?.createdOn))
+
+const descriptionHtml = computed(() => renderMarkdown(detail.value?.description))
+
+const editProjectId = computed(() => projectId.value ?? detail.value?.projectId ?? null)
+
+function onEditSuccess(updated?: IssueDetail) {
+  if (!updated) {
+    void loadDetail()
+    return
+  }
+  detail.value = updated
+  const newPid = updated.projectId
+  if (newPid != null && newPid !== projectId.value) {
+    void router.push({
+      name: 'IssueDetail',
+      params: { projectId: String(newPid), issueId: String(updated.id) },
+    })
+  }
+}
+
+function goParentIssue(parentId: number) {
+  const pid = detail.value?.projectId ?? projectId.value
+  if (pid == null) return
+  void router.push({
+    name: 'IssueDetail',
+    params: { projectId: String(pid), issueId: String(parentId) },
+  })
+}
 
 async function loadProjectContext() {
   const pid = projectId.value
@@ -77,6 +108,7 @@ watch(
             <span class="issue-heading__state">[{{ issueOpenLabel }}]</span>
           </div>
           <div class="issue-heading__actions">
+            <el-button type="primary" @click="editVisible = true">编辑</el-button>
             <el-button
               :disabled="projectId == null"
               @click="router.push({ name: 'IssueList', params: { projectId: String(projectId) } })"
@@ -106,6 +138,17 @@ watch(
         <el-descriptions-item label="优先级">{{ detail.priorityName || detail.priorityId || '—' }}</el-descriptions-item>
         <el-descriptions-item label="指派给">{{ detail.assignedToName || detail.assignedToId || '—' }}</el-descriptions-item>
         <el-descriptions-item label="类别">{{ detail.categoryName || detail.categoryId || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="父任务">
+          <el-button
+            v-if="detail.parentId"
+            link
+            type="primary"
+            @click="goParentIssue(detail.parentId)"
+          >
+            #{{ detail.parentId }}
+          </el-button>
+          <span v-else>—</span>
+        </el-descriptions-item>
         <el-descriptions-item label="目标版本">{{ detail.fixedVersionName || detail.fixedVersionId || '—' }}</el-descriptions-item>
         <el-descriptions-item label="开始日期">{{ detail.startDate || '—' }}</el-descriptions-item>
         <el-descriptions-item label="截止日期">{{ detail.dueDate || '—' }}</el-descriptions-item>
@@ -113,10 +156,25 @@ watch(
         <el-descriptions-item label="预估工时">{{ detail.estimatedHours ?? '—' }}</el-descriptions-item>
         <el-descriptions-item label="更新时间">{{ detail.updatedOn || '—' }}</el-descriptions-item>
         <el-descriptions-item label="私有">{{ detail.isPrivate ? '是' : '否' }}</el-descriptions-item>
-        <el-descriptions-item label="描述" :span="2">
-          <div class="issue-detail__desc">{{ detail.description || '—' }}</div>
-        </el-descriptions-item>
       </el-descriptions>
+
+      <section class="issue-detail__description">
+        <h2 class="issue-detail__description-title">描述</h2>
+        <div
+          v-if="descriptionHtml"
+          class="jr-markdown-body issue-detail__description-body"
+          v-html="descriptionHtml"
+        />
+        <p v-else class="issue-detail__description-empty">暂无描述。</p>
+      </section>
+
+      <IssueFormDialog
+        v-model="editVisible"
+        mode="edit"
+        :issue-id="issueId"
+        :project-id="editProjectId"
+        @success="onEditSuccess"
+      />
     </template>
   </el-card>
 </template>
@@ -198,8 +256,26 @@ watch(
   margin-top: 4px;
 }
 
-.issue-detail__desc {
-  white-space: pre-wrap;
-  line-height: 1.6;
+.issue-detail__description {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.issue-detail__description-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.issue-detail__description-body {
+  padding: 4px 0;
+}
+
+.issue-detail__description-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
 }
 </style>

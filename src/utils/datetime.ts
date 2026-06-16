@@ -1,3 +1,20 @@
+/** 格式化为 yyyy-MM-dd */
+export function formatDate(raw: string | null | undefined): string {
+  if (raw == null || raw === '') return '—'
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10)
+  const d = new Date(raw.replace(' ', 'T'))
+  if (Number.isNaN(d.getTime())) return String(raw)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** 返回本地日期的 yyyy-MM-dd 字符串 */
+export function todayDateString(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 /** 格式化为 yyyy-MM-dd HH:mm */
 export function formatDateTime(raw: string | null | undefined): string {
   if (raw == null || raw === '') return '—'

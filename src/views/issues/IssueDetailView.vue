@@ -4,13 +4,16 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
 import IssueFormDialog from '@/views/issues/IssueFormDialog.vue'
+import TimeEntryFormDialog from '@/views/issues/TimeEntryFormDialog.vue'
 import { fetchIssueDetail } from '@/services/issues'
+import { fetchTimeEntryList } from '@/services/time-entries'
 import { fetchProjectDetail } from '@/services/projects'
 import { useProjectContextStore } from '@/stores/project-context'
-import { formatDateTime, formatRelativeTimeZh } from '@/utils/datetime'
+import { formatDate, formatDateTime, formatRelativeTimeZh } from '@/utils/datetime'
 import { parseBackendErrorMessage } from '@/utils/http-error'
 import { renderMarkdown } from '@/utils/wiki-content'
 import type { IssueDetail } from '@/types/issue'
+import type { TimeEntryItem, TimeEntryUser } from '@/types/time-entry'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +22,10 @@ const ctx = useProjectContextStore()
 const loading = ref(false)
 const detail = ref<IssueDetail | null>(null)
 const editVisible = ref(false)
+const timeEntryVisible = ref(false)
+const timeEntriesLoading = ref(false)
+const timeEntries = ref<TimeEntryItem[]>([])
+const timeEntriesTotalHours = ref(0)
 
 const projectId = computed(() => {
   const id = Number(route.params.projectId)
@@ -37,6 +44,14 @@ const createdRelative = computed(() => formatRelativeTimeZh(detail.value?.create
 const descriptionHtml = computed(() => renderMarkdown(detail.value?.description))
 
 const editProjectId = computed(() => projectId.value ?? detail.value?.projectId ?? null)
+
+const timeEntryProjectId = computed(() => detail.value?.projectId ?? projectId.value ?? null)
+
+function timeEntryUserName(user: TimeEntryUser | null | undefined): string {
+  if (!user) return '—'
+  const full = `${user.firstname ?? ''} ${user.lastname ?? ''}`.trim()
+  return full || user.login
+}
 
 function onEditSuccess(updated?: IssueDetail) {
   if (!updated) {
@@ -79,12 +94,45 @@ async function loadDetail() {
   loading.value = true
   try {
     detail.value = await fetchIssueDetail(id)
+    void loadTimeEntries()
   } catch (e) {
     ElMessage.error(parseBackendErrorMessage(e, '加载问题详情失败'))
     detail.value = null
   } finally {
     loading.value = false
   }
+}
+
+async function loadTimeEntries() {
+  const iid = issueId.value
+  const pid = timeEntryProjectId.value
+  if (iid == null || pid == null) {
+    timeEntries.value = []
+    timeEntriesTotalHours.value = 0
+    return
+  }
+  timeEntriesLoading.value = true
+  try {
+    const page = await fetchTimeEntryList({
+      projectId: pid,
+      issueId: iid,
+      pageNum: 1,
+      pageSize: 50,
+      sortBy: 'spent_on',
+      sortOrder: 'desc',
+    })
+    timeEntries.value = page.records ?? []
+    timeEntriesTotalHours.value = timeEntries.value.reduce((sum, row) => sum + (row.hours ?? 0), 0)
+  } catch {
+    timeEntries.value = []
+    timeEntriesTotalHours.value = 0
+  } finally {
+    timeEntriesLoading.value = false
+  }
+}
+
+function onTimeEntrySuccess() {
+  void loadTimeEntries()
 }
 
 watch(
@@ -109,6 +157,7 @@ watch(
           </div>
           <div class="issue-heading__actions">
             <el-button type="primary" @click="editVisible = true">编辑</el-button>
+            <el-button @click="timeEntryVisible = true">登记工时</el-button>
             <el-button
               :disabled="projectId == null"
               @click="router.push({ name: 'IssueList', params: { projectId: String(projectId) } })"
@@ -168,12 +217,51 @@ watch(
         <p v-else class="issue-detail__description-empty">暂无描述。</p>
       </section>
 
+      <section class="issue-detail__time-entries">
+        <div class="issue-detail__time-entries-head">
+          <h2 class="issue-detail__section-title">
+            工时
+            <span v-if="timeEntries.length > 0" class="issue-detail__time-total">
+              合计 {{ timeEntriesTotalHours.toFixed(2) }} 小时
+            </span>
+          </h2>
+          <el-button size="small" @click="timeEntryVisible = true">登记工时</el-button>
+        </div>
+        <el-table
+          v-loading="timeEntriesLoading"
+          :data="timeEntries"
+          stripe
+          empty-text="暂无工时记录"
+          class="jr-compact-table issue-detail__time-table"
+        >
+          <el-table-column prop="spentOn" label="日期" width="120">
+            <template #default="{ row }">{{ formatDate(row.spentOn) }}</template>
+          </el-table-column>
+          <el-table-column prop="user" label="用户" width="120" show-overflow-tooltip>
+            <template #default="{ row }">{{ timeEntryUserName(row.user) }}</template>
+          </el-table-column>
+          <el-table-column prop="activityName" label="活动" width="100" show-overflow-tooltip />
+          <el-table-column prop="hours" label="工时" width="80" align="right">
+            <template #default="{ row }">{{ row.hours?.toFixed(2) ?? '—' }}</template>
+          </el-table-column>
+          <el-table-column prop="comments" label="备注" min-width="160" show-overflow-tooltip />
+        </el-table>
+      </section>
+
       <IssueFormDialog
         v-model="editVisible"
         mode="edit"
         :issue-id="issueId"
         :project-id="editProjectId"
         @success="onEditSuccess"
+      />
+
+      <TimeEntryFormDialog
+        v-model="timeEntryVisible"
+        :project-id="timeEntryProjectId"
+        :issue-id="issueId"
+        :issue-subject="detail.subject"
+        @success="onTimeEntrySuccess"
       />
     </template>
   </el-card>
@@ -277,5 +365,38 @@ watch(
   margin: 0;
   font-size: 14px;
   color: var(--el-text-color-secondary);
+}
+
+.issue-detail__time-entries {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.issue-detail__time-entries-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.issue-detail__section-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.issue-detail__time-total {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--el-text-color-secondary);
+}
+
+.issue-detail__time-table {
+  width: 100%;
+  max-width: 100%;
 }
 </style>

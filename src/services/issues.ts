@@ -64,3 +64,13 @@ export async function deleteIssue(id: number): Promise<void> {
   unwrapApiOk(data, '删除问题失败')
 }
 
+export async function addIssueWatcher(issueId: number, userId: number): Promise<void> {
+  const { data } = await http.post<ApiResponse<unknown>>(`/api/issues/${issueId}/watchers`, { userId })
+  unwrapApiOk(data, '关注失败')
+}
+
+export async function deleteIssueWatcher(issueId: number, userId: number): Promise<void> {
+  const { data } = await http.delete<ApiResponse<unknown>>(`/api/issues/${issueId}/watchers/${userId}`)
+  unwrapApiOk(data, '取消关注失败')
+}
+

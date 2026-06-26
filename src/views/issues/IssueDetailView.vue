@@ -2,12 +2,14 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Star, StarFilled } from '@element-plus/icons-vue'
 
 import IssueFormDialog from '@/views/issues/IssueFormDialog.vue'
 import TimeEntryFormDialog from '@/views/issues/TimeEntryFormDialog.vue'
-import { fetchIssueDetail } from '@/services/issues'
+import { addIssueWatcher, deleteIssueWatcher, fetchIssueDetail } from '@/services/issues'
 import { fetchTimeEntryList } from '@/services/time-entries'
 import { fetchProjectDetail } from '@/services/projects'
+import { useAuthStore } from '@/stores/auth'
 import { useProjectContextStore } from '@/stores/project-context'
 import { formatDate, formatDateTime, formatRelativeTimeZh } from '@/utils/datetime'
 import { parseBackendErrorMessage } from '@/utils/http-error'
@@ -17,9 +19,11 @@ import type { TimeEntryItem, TimeEntryUser } from '@/types/time-entry'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const ctx = useProjectContextStore()
 
 const loading = ref(false)
+const watchLoading = ref(false)
 const detail = ref<IssueDetail | null>(null)
 const editVisible = ref(false)
 const timeEntryVisible = ref(false)
@@ -46,6 +50,8 @@ const descriptionHtml = computed(() => renderMarkdown(detail.value?.description)
 const editProjectId = computed(() => projectId.value ?? detail.value?.projectId ?? null)
 
 const timeEntryProjectId = computed(() => detail.value?.projectId ?? projectId.value ?? null)
+
+const isWatched = computed(() => detail.value?.watched === true)
 
 function timeEntryUserName(user: TimeEntryUser | null | undefined): string {
   if (!user) return '—'
@@ -135,6 +141,29 @@ function onTimeEntrySuccess() {
   void loadTimeEntries()
 }
 
+async function toggleWatch() {
+  const iid = issueId.value
+  const uid = auth.user?.id
+  if (iid == null || uid == null) return
+
+  watchLoading.value = true
+  try {
+    if (isWatched.value) {
+      await deleteIssueWatcher(iid, uid)
+      if (detail.value) detail.value.watched = false
+      ElMessage.success('已取消关注')
+    } else {
+      await addIssueWatcher(iid, uid)
+      if (detail.value) detail.value.watched = true
+      ElMessage.success('关注成功')
+    }
+  } catch (e) {
+    ElMessage.error(parseBackendErrorMessage(e, '操作失败'))
+  } finally {
+    watchLoading.value = false
+  }
+}
+
 watch(
   () => [route.params.projectId, route.params.issueId],
   () => {
@@ -158,6 +187,10 @@ watch(
           <div class="issue-heading__actions">
             <el-button type="primary" @click="editVisible = true">编辑</el-button>
             <el-button @click="timeEntryVisible = true">登记工时</el-button>
+            <el-button :loading="watchLoading" @click="toggleWatch">
+              <el-icon><component :is="isWatched ? StarFilled : Star" /></el-icon>
+              {{ isWatched ? '取消关注' : '关注' }}
+            </el-button>
             <el-button
               :disabled="projectId == null"
               @click="router.push({ name: 'IssueList', params: { projectId: String(projectId) } })"

@@ -73,6 +73,8 @@ export interface IssueDetail {
   rootId: number | null
   isPrivate: boolean | null
   closedOn: string | null
+  /** 当前用户是否已关注 */
+  watched?: boolean | null
 }
 
 export interface IssueCreatePayload {
